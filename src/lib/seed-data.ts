@@ -11,12 +11,12 @@ export const fallbackStats: PlatformStats = {
 };
 
 export const fallbackBuildings: Building[] = [
-  { id: 'b1', slug: 'anniversary-towers', name: 'Anniversary Towers', address: 'Mama Ngina Street', area: 'Nairobi CBD', total_stalls: 72, registered_merchants: 58, avg_rating: 4.7, coverage_pct: 81, image_url: '/images/bldg-anniversary.jpg', verified: true },
-  { id: 'b2', slug: 'kencom-house', name: 'Kencom House', address: 'Moi Avenue', area: 'Nairobi CBD', total_stalls: 84, registered_merchants: 71, avg_rating: 4.8, coverage_pct: 85, image_url: '/images/bldg-kencom.jpg', verified: true },
-  { id: 'b3', slug: 'bazaar-plaza', name: 'Bazaar Plaza', address: 'Moi Avenue / Biashara Street', area: 'Nairobi CBD', total_stalls: 96, registered_merchants: 63, avg_rating: 4.6, coverage_pct: 66, image_url: '/images/bldg-bazaar.jpg', verified: true },
-  { id: 'b4', slug: 'bihi-towers', name: 'Bihi Towers', address: 'Moi Avenue', area: 'Nairobi CBD', total_stalls: 64, registered_merchants: 39, avg_rating: 4.5, coverage_pct: 61, image_url: '/images/bldg-bihi.jpg', verified: true },
-  { id: 'b5', slug: 'jamia-mall', name: 'Jamia Mall', address: 'Kimathi Street', area: 'Nairobi CBD', total_stalls: 88, registered_merchants: 52, avg_rating: 4.7, coverage_pct: 59, image_url: '/images/bldg-jamia.jpg', verified: true },
-  { id: 'b6', slug: 'rehema-house', name: 'Rehema House', address: 'Kimathi Street', area: 'Nairobi CBD', total_stalls: 56, registered_merchants: 31, avg_rating: 4.6, coverage_pct: 55, image_url: '/images/bldg-rehema.jpg', verified: true },
+  { id: 'b1', slug: 'anniversary-towers', lat: -1.2841, lng: 36.8265, name: 'Anniversary Towers', address: 'Mama Ngina Street', area: 'Nairobi CBD', total_stalls: 72, registered_merchants: 58, avg_rating: 4.7, coverage_pct: 81, image_url: '/images/bldg-anniversary.jpg', verified: true },
+  { id: 'b2', slug: 'kencom-house', lat: -1.2864, lng: 36.8258, name: 'Kencom House', address: 'Moi Avenue', area: 'Nairobi CBD', total_stalls: 84, registered_merchants: 71, avg_rating: 4.8, coverage_pct: 85, image_url: '/images/bldg-kencom.jpg', verified: true },
+  { id: 'b3', slug: 'bazaar-plaza', lat: -1.2852, lng: 36.8251, name: 'Bazaar Plaza', address: 'Moi Avenue / Biashara Street', area: 'Nairobi CBD', total_stalls: 96, registered_merchants: 63, avg_rating: 4.6, coverage_pct: 66, image_url: '/images/bldg-bazaar.jpg', verified: true },
+  { id: 'b4', slug: 'bihi-towers', lat: -1.2849, lng: 36.8247, name: 'Bihi Towers', address: 'Moi Avenue', area: 'Nairobi CBD', total_stalls: 64, registered_merchants: 39, avg_rating: 4.5, coverage_pct: 61, image_url: '/images/bldg-bihi.jpg', verified: true },
+  { id: 'b5', slug: 'jamia-mall', lat: -1.2837, lng: 36.8238, name: 'Jamia Mall', address: 'Kimathi Street', area: 'Nairobi CBD', total_stalls: 88, registered_merchants: 52, avg_rating: 4.7, coverage_pct: 59, image_url: '/images/bldg-jamia.jpg', verified: true },
+  { id: 'b6', slug: 'rehema-house', lat: -1.2833, lng: 36.8233, name: 'Rehema House', address: 'Kimathi Street', area: 'Nairobi CBD', total_stalls: 56, registered_merchants: 31, avg_rating: 4.6, coverage_pct: 55, image_url: '/images/bldg-rehema.jpg', verified: true },
 ];
 
 const merchantRows: Omit<Merchant, 'id'>[] = [

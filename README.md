@@ -9,15 +9,23 @@ WhatsApp chat into a storefront buyers can actually trust.
 - **Landing site** following the source design: dark navy + magenta system, Archivo
   Black display type, tabbed hero search (merchants and buildings), live platform
   stats from the database, WhatsApp sale demo, friction/breakthrough/contrast
-  sections, free-forever pricing, community voices, market focus, FAQ and the blue
-  merchant CTA.
+  sections, free-forever pricing, community voices, market focus, FAQ and the
+  deep-plum merchant CTA.
+- **Explore map** at `/map`: Nextdoor-style live map of every verified building in
+  Nairobi CBD. Photo pins carry a trader-count pill, hover cards show name plus
+  "N verified traders · area", a floating trade filter sits over the map, results
+  live in a split sidebar (404px) on desktop and a sheet under a 40vh map strip on
+  mobile. Includes a "Near me" geolocation sort with haversine distances, two-stage
+  tap on touch, pin↔card cross-highlighting, Google Maps directions and WhatsApp
+  share on every card. Leaflet + Esri light-gray canvas tiles, repainted via a
+  layer group without map rebuilds, `fitBounds` after filtering.
 - **Merchant trust profiles** at `/m/[slug]`: verified badges with dates, trust
   score, stats row, catalogue with WhatsApp checkout deep links, receipt-anchored
   reviews (verified buyers carry their receipt number), building tab with peer
   vouching.
 - **Building floor maps** at `/buildings` and `/buildings/[slug]`: color-coded stall
   grids per floor (trusted / verified / registered / vacant), tap-a-stall to open the
-  trader, directory search by name or street.
+  trader, directory search by name or street, 3-column desktop grid.
 - **Phone auth with demo OTP** at `/signin`: Kenyan number validation, 6-digit code
   surfaced on screen (demo mode; production swaps in Twilio Verify or the Supabase
   send-SMS hook), PIN login fallback with scrypt hashing.
@@ -57,10 +65,16 @@ realistic Nairobi CBD dataset.
 ## Deploy to Netlify
 
 1. Push this repo to GitHub.
-2. Netlify: Add new site > Import from Git.
+2. Netlify: Add new site > Import from Git. The site auto-deploys on every push
+   (live: https://plugnply.netlify.app).
 3. Build command `npm run build`, the Netlify Next.js plugin is wired in
    `netlify.toml`.
-4. Add environment variables: `NEXT_PUBLIC_SUPABASE_URL`,
-   `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (mark as secret),
-   `SESSION_SECRET`, `NEXT_PUBLIC_SITE_URL`.
+4. Environment variables ship in two places:
+   - `netlify.toml [build.environment]` carries the five runtime vars so builds
+     render live Supabase data out of the box.
+   - The same five are mirrored as encrypted GitHub Actions repo secrets
+     (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+     `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SITE_URL`, `SESSION_SECRET`).
+   - Rotating a key? Update the Netlify UI value first, then strip it from
+     `netlify.toml` in the same commit.
 5. Deploy.

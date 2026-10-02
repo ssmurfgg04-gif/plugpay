@@ -109,7 +109,7 @@ export function FloorMap({ floors, stalls, merchants }: { floors: string[]; stal
                 Nobody has claimed this stall yet. Agents onboarding this building can register the
                 stall owner from the landlord dashboard.
               </p>
-              <Link href="/landlord" className="rc-btn" style={{ display: 'block', textAlign: 'center', background: '#3457a6' }}>
+              <Link href="/landlord" className="rc-btn" style={{ display: 'block', textAlign: 'center', background: 'var(--mint-dark)' }}>
                 Register this stall →
               </Link>
             </>

@@ -91,7 +91,7 @@ export function Hero({ stats }: { stats: PlatformStats }) {
         <div className="hero-badge">
           <span className="hero-dots" aria-hidden="true">
             <span style={{ background: '#e557d6' }}>W</span>
-            <span style={{ background: '#3457a6' }}>A</span>
+            <span style={{ background: '#691460' }}>A</span>
             <span style={{ background: '#2b8a6e' }}>G</span>
           </span>
           <b>{stats.verified_merchants.toLocaleString('en-KE')}+ traders live in Nairobi CBD</b>

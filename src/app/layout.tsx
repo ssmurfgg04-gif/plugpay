@@ -13,6 +13,10 @@ export const metadata: Metadata = {
     'verified sellers Kenya', 'WhatsApp commerce Nairobi', 'Nairobi CBD traders',
     'trust score', 'M-Pesa receipts', 'jua kali marketplace',
   ],
+  icons: {
+    icon: '/logo.svg',
+    apple: '/logo.svg',
+  },
   openGraph: {
     title: 'PlugPay: The trust layer for Kenya\'s WhatsApp commerce',
     description: 'Verified traders. Real receipts. Buyers who trust you before they pay.',

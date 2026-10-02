@@ -6,7 +6,7 @@ export function SiteNav() {
       <div className="nav-inner">
         <div className="nav-top">
           <Link href="/" className="logo" aria-label="PlugPay home">
-            <span className="logo-mark">P</span>
+            <img src="/logo.svg" alt="PlugPay logo" className="logo-img" width={27} height={27} />
             <span className="pp-logo">
               <span className="plug">Plug</span>
               <span className="pay">Pay</span>
@@ -15,6 +15,7 @@ export function SiteNav() {
           <Link href="/signin" className="nav-cta">Join us</Link>
         </div>
         <div className="nav-links">
+          <a href="/map">Explore map</a>
           <a href="/#how-it-works">How it works</a>
           <a href="/#trust">Why PlugPay</a>
           <a href="/buildings">Buildings</a>

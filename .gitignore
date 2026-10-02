@@ -71,3 +71,18 @@ prisma/dev.db
 agent-ctx/
 .claude
 .zscripts/
+
+# local build/audit artifacts
+audit_shots/
+imgsearch/
+tool-results/
+scripts/set_github_secrets.py
+scripts/find_supabase_project.py
+scripts/get_keys_and_verify.py
+scripts/audit_shots.py
+scripts/local_shots.py
+scripts/source_images.py
+scripts/source_products_avatars.py
+scripts/source_round2.py
+scripts/make_sheets.py
+scripts/finalize_images.py

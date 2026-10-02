@@ -5,6 +5,8 @@ export interface Building {
   name: string;
   address: string;
   area: string;
+  lat: number | string | null;
+  lng: number | string | null;
   total_stalls: number;
   registered_merchants: number;
   avg_rating: number;

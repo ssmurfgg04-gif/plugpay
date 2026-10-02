@@ -27,6 +27,7 @@ export function SiteFooter() {
         <div className="footer-grid">
           <div className="footer-brand">
             <Link href="/" className="pp-logo" style={{ color: '#fff' }}>
+              <img src="/logo.svg" alt="PlugPay logo" width={26} height={26} style={{ borderRadius: 8, display: 'inline-block', marginRight: 8, verticalAlign: 'middle' }} />
               <span className="plug">Plug</span><span className="pay">Pay</span>
             </Link>
             <p className="footer-desc">

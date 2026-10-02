@@ -70,3 +70,4 @@ db/custom.db
 prisma/dev.db
 agent-ctx/
 .claude
+.zscripts/

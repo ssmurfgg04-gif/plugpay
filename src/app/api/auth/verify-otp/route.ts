@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { SESSION_COOKIE, serializeSession } from '@/lib/session';
+import { OTP_COOKIE, SESSION_COOKIE, readOtpCookie, serializeSession } from '@/lib/session';
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
@@ -10,54 +10,80 @@ export async function POST(req: NextRequest) {
   }
 
   const { hasSupabase, supabase } = await import('@/lib/supabase');
-  if (!hasSupabase) {
-    return NextResponse.json({ ok: false, error: 'Database not configured in this preview.' }, { status: 503 });
+
+  // 1) Primary check: the code stored in the database for this phone.
+  let dbVerified = false;
+  if (hasSupabase) {
+    try {
+      const { data: otp } = await supabase()
+        .from('otp_codes')
+        .select('*')
+        .eq('phone', phone)
+        .maybeSingle();
+      if (otp && otp.code === code && new Date(otp.expires_at).getTime() > Date.now()) {
+        dbVerified = true;
+        await supabase().from('otp_codes').delete().eq('phone', phone);
+      }
+    } catch {
+      // fall through to the cookie check
+    }
   }
 
-  const { data: otp } = await supabase()
-    .from('otp_codes')
-    .select('*')
-    .eq('phone', phone)
-    .single();
+  // 2) Fallback check: the signed one-time-code cookie issued by send-otp.
+  let cookieVerified = false;
+  if (!dbVerified) {
+    cookieVerified = readOtpCookie(req.cookies.get(OTP_COOKIE)?.value, phone, code);
+  }
 
-  if (!otp || otp.code !== code || new Date(otp.expires_at).getTime() < Date.now()) {
+  if (!dbVerified && !cookieVerified) {
     return NextResponse.json({ ok: false, error: 'That code is wrong or expired. Request a new one.' }, { status: 401 });
   }
-  await supabase().from('otp_codes').delete().eq('phone', phone);
 
-  // Find the merchant whose phone matches, else create a demo trader shell
+  // Find the merchant whose phone matches, else create a trader shell.
   const digits = phone.replace(/^\+?254/, '0');
   const alt = `+254 ${digits.slice(1, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
-  let { data: merchant } = await supabase()
-    .from('merchants')
-    .select('slug, phone')
-    .or(`phone.eq.${digits},phone.eq.${alt},phone.eq.${phone}`)
-    .maybeSingle();
+  let slug: string | null = null;
+  let matched = false;
 
-  let slug = merchant?.slug ?? null;
-  if (!slug) {
-    const created = await supabase()
-      .from('merchants')
-      .insert({
-        slug: `trader-${digits.slice(-6)}-${Date.now().toString(36)}`,
-        business_name: `Trader ${digits.slice(-4)}`,
-        owner_name: 'New trader',
-        category: 'Other',
-        phone: digits,
-        verified: 'basic',
-        is_demo: true,
-        claimed: true,
-      })
-      .select('slug')
-      .single();
-    slug = created.data?.slug ?? null;
+  if (hasSupabase) {
+    try {
+      const { data: merchant } = await supabase()
+        .from('merchants')
+        .select('slug, phone')
+        .or(`phone.eq.${digits},phone.eq.${alt},phone.eq.${phone}`)
+        .maybeSingle();
+
+      if (merchant?.slug) {
+        slug = merchant.slug;
+        matched = true;
+      } else {
+        const created = await supabase()
+          .from('merchants')
+          .insert({
+            slug: `trader-${digits.slice(-6)}-${Date.now().toString(36)}`,
+            business_name: `Trader ${digits.slice(-4)}`,
+            owner_name: 'New trader',
+            category: 'Other',
+            phone: digits,
+            verified: 'basic',
+            is_demo: true,
+            claimed: true,
+          })
+          .select('slug')
+          .single();
+        slug = created.data?.slug ?? null;
+      }
+    } catch {
+      slug = null;
+    }
   }
 
+  // Last resort (no DB): issue a transient profile so the preview still works.
   if (!slug) {
-    return NextResponse.json({ ok: false, error: 'Could not open a profile for this number.' }, { status: 500 });
+    slug = `trader-${digits.slice(-6)}-offline`;
   }
 
-  const res = NextResponse.json({ ok: true, slug, matched: Boolean(merchant) });
+  const res = NextResponse.json({ ok: true, slug, matched });
   res.cookies.set(SESSION_COOKIE, serializeSession({ merchantSlug: slug, phone, role: 'trader', iat: Date.now() }), {
     httpOnly: true,
     sameSite: 'lax',
@@ -65,5 +91,6 @@ export async function POST(req: NextRequest) {
     maxAge: 60 * 60 * 24 * 30,
     path: '/',
   });
+  res.cookies.delete(OTP_COOKIE);
   return res;
 }

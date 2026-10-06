@@ -1,8 +1,10 @@
+// POST /api/sales - record a sale (receipt) for the signed-in seller.
+// Item convention from the PlugPay UI: { name, qty, unit, price } where
+// price is the LINE TOTAL (qty * unit) and unit is the per-item price.
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createReceipt } from '@/lib/data';
 import { getSession } from '@/lib/session';
-
-interface SaleItem { name: string; qty: number; price: number }
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
@@ -15,14 +17,17 @@ export async function POST(req: NextRequest) {
   const buyerPhone = String(body?.buyerPhone ?? '').trim();
   const mpesaCode = String(body?.mpesaCode ?? '').trim().toUpperCase();
   const delivery = body?.delivery === 'runner' ? 'runner' : 'pickup';
-  const items: SaleItem[] = Array.isArray(body?.items)
+  const items = Array.isArray(body?.items)
     ? body.items
-        .map((i: { name?: string; qty?: number; price?: number }) => ({
-          name: String(i?.name ?? '').trim(),
-          qty: Math.max(1, Math.min(999, Number(i?.qty ?? 1) || 1)),
-          price: Math.max(0, Math.min(10_000_000, Number(i?.price ?? 0) || 0)),
-        }))
-        .filter((i: SaleItem) => i.name.length > 0)
+        .map(
+          (i: { name?: unknown; qty?: unknown; price?: unknown; unit?: unknown }) => ({
+            name: String(i?.name ?? '').trim(),
+            qty: Math.max(1, Math.min(999, Number(i?.qty ?? 1) || 1)),
+            price: Math.max(0, Math.min(10_000_000, Number(i?.price ?? 0) || 0)),
+            unit: Math.max(0, Math.min(10_000_000, Number(i?.unit ?? 0) || 0)),
+          }),
+        )
+        .filter((i: { name: string }) => i.name.length > 0)
     : [];
 
   if (!buyerName) return NextResponse.json({ ok: false, error: 'Buyer name is required' }, { status: 400 });
@@ -34,7 +39,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Enter the M-Pesa confirmation code from the payment SMS' }, { status: 400 });
   }
 
-  const total = items.reduce((sum, i) => sum + i.qty * i.price, 0);
+  const total = items.reduce((sum: number, i: { price: number }) => sum + i.price, 0);
   const { hasSupabase, supabase } = await import('@/lib/supabase');
   if (!hasSupabase) return NextResponse.json({ ok: false, error: 'Database not configured in this preview.' }, { status: 503 });
 

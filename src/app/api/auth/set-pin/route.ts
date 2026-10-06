@@ -12,9 +12,23 @@ export async function POST(req: NextRequest) {
   const { hasSupabase, supabase } = await import('@/lib/supabase');
   if (!hasSupabase) return NextResponse.json({ ok: false, error: 'Database not configured in this preview.' }, { status: 503 });
 
+  const hash = hashPin(pin, session.phone);
+
+  if (session.role === 'landlord') {
+    const { error } = await supabase()
+      .from('landlord_accounts')
+      .update({ pin_hash: hash })
+      .eq('owner_phone', session.phone);
+    if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
+  }
+
+  if (!session.merchantSlug) {
+    return NextResponse.json({ ok: false, error: 'Session expired. Sign in again.' }, { status: 401 });
+  }
   const { error } = await supabase()
     .from('merchants')
-    .update({ pin_hash: hashPin(pin, session.phone) })
+    .update({ pin_hash: hash })
     .eq('slug', session.merchantSlug);
 
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });

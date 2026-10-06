@@ -7,7 +7,7 @@ const SECRET = process.env.SESSION_SECRET || 'plugpay-demo-secret-2026-nairobi';
 export const SESSION_COOKIE = 'pp_session';
 
 export interface SessionPayload {
-  merchantSlug: string;
+  merchantSlug: string | null;
   phone: string;
   role: 'trader' | 'landlord' | 'agent';
   iat: number;

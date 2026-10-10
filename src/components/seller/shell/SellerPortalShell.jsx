@@ -15,22 +15,40 @@ export function SellerPortalShell(props) {
       wrapClass="sp-wrap"
       header={
         <TopBar
-          title="My Business"
+          title={pp.sellerProfile.bizName || "My Business"}
           actions={
-            <button
-              className="tp-navbar-btn"
-              style={{
-                width: "auto",
-                padding: "0 12px",
-                fontSize: 10,
-                fontWeight: 800,
-              }}
-              onClick={function () {
-                pp.viewSellerProfile();
-              }}
-            >
-              View profile
-            </button>
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <button
+                className="tp-navbar-btn"
+                style={{
+                  width: "auto",
+                  padding: "0 12px",
+                  fontSize: 10,
+                  fontWeight: 800,
+                }}
+                onClick={function () {
+                  pp.viewSellerProfile();
+                }}
+              >
+                View profile
+              </button>
+              <button
+                className="tp-navbar-btn"
+                style={{
+                  width: "auto",
+                  padding: "0 10px",
+                  fontSize: 10,
+                  fontWeight: 800,
+                  opacity: 0.85,
+                }}
+                aria-label="Sign out"
+                onClick={function () {
+                  pp.authLogout();
+                }}
+              >
+                Sign out
+              </button>
+            </div>
           }
         />
       }

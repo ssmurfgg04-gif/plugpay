@@ -39,7 +39,9 @@ export function relTime(iso) {
 /* ---- Store: single source of truth, split into one section per group ---- */
 /* ---- Store: single source of truth, split into one section per group ---- */
 export function usePersisted(key, initial) {
-  var k = "pp6:" + key;
+  // pp7: namespace bumped from pp6 to leave any pre-email-auth local demo
+  // data behind. Fresh devices and returning users start clean.
+  var k = "pp7:" + key;
   var st = useState(function () {
     try {
       var raw = window.localStorage.getItem(k);

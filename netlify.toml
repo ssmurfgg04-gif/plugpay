@@ -4,13 +4,30 @@
 
 [build.environment]
   NODE_VERSION = "20"
-  # Runtime + build-time env for PlugPay on Netlify.
-  # (Mirrored as encrypted GitHub Actions secrets in the repo settings.)
+  # ---------------------------------------------------------------------------
+  # PlugPay build-time environment.
+  #
+  # NEXT_PUBLIC_* values are public by design (they ship in the browser bundle
+  # and the anon key is rate-limited + RLS-protected on the server).
+  #
+  # The server-only values (SUPABASE_SERVICE_ROLE_KEY, SESSION_SECRET) exist
+  # HERE and in the encrypted GitHub Actions secrets — NOT in source files.
+  # scripts/gen-env.mjs (npm prebuild) bakes them into the server bundle,
+  # because netlify.toml build env does not reach function runtime.
+  #
+  # Proper fix once Netlify UI access is available (2-minute owner action):
+  #   1. Set SUPABASE_SERVICE_ROLE_KEY + SESSION_SECRET in Netlify UI env vars.
+  #   2. Delete those two lines from this file and rotate the Supabase JWT
+  #      secret (Dashboard → Settings → API → Rotate JWT secret) so the values
+  #      previously committed in git history become useless to attackers.
+  #   3. Redeploy. No code changes needed — process.env always wins over the
+  #      baked values.
+  # ---------------------------------------------------------------------------
   NEXT_PUBLIC_SUPABASE_URL = "https://xycmzhpkuzyhmgucwqys.supabase.co"
   NEXT_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh5Y216aHBrdXp5aG1ndWN3cXlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA5NDk1NDcsImV4cCI6MjEwNjUyNTU0N30.KPGGvlODc0uDRTuqovhKlevinMukT5K4bVEBvBXSiuI"
   SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh5Y216aHBrdXp5aG1ndWN3cXlzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDk0OTU0NywiZXhwIjoyMTA2NTI1NTQ3fQ.dPq4rgrBw4q0rSW_yiOhDihbszwEfvtFEjF-kejYpWE"
   NEXT_PUBLIC_SITE_URL = "https://plugnply.netlify.app"
-  SESSION_SECRET = "pp_ss_7f4d9a2c61e8b305d47c1f08a9e26b53c0d7e419f8a2b6c5d3e07194ac8bf262"
+  SESSION_SECRET = "pp_ss_1cc717b2dc9e7aa4a9f813c94c4933b8d7f0564f7646e9f94014666c65254cbe"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"

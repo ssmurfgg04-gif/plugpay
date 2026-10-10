@@ -26,9 +26,12 @@ WhatsApp chat into a storefront buyers can actually trust.
 - **Building floor maps** at `/buildings` and `/buildings/[slug]`: color-coded stall
   grids per floor (trusted / verified / registered / vacant), tap-a-stall to open the
   trader, directory search by name or street, 3-column desktop grid.
-- **Phone auth with demo OTP** at `/signin`: Kenyan number validation, 6-digit code
-  surfaced on screen (demo mode; production swaps in Twilio Verify or the Supabase
-  send-SMS hook), PIN login fallback with scrypt hashing.
+- **Email + password auth** for every portal (seller / landlord / agent) at
+  `/seller/*`, `/landlord/*`, `/agent/*`: register once, sign in with the same
+  email and password. No SMS/WhatsApp OTP, no one-time codes on screen.
+  Passwords are scrypt-hashed with per-user salts (`app_users` table); sessions
+  are HMAC-signed httpOnly cookies (`src/lib/session.ts`). A new account is a
+  CLEAN account — empty catalogue, zero sales, no demo records attached.
 - **Trader dashboard** at `/dashboard`: record a sale with M-Pesa confirmation code,
   itemised totals, delivery choice, receipt confirmation state, PIN management.
 - **Landlord tools** at `/landlord`: occupancy, coverage and monthly verification

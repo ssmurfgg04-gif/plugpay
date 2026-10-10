@@ -1,17 +1,16 @@
 // Supabase server client. Server-only: never import this from a client
-// component. Falls back to the project credentials bundled from netlify.toml
-// so the deployed Netlify functions always reach the database, even though
-// netlify.toml [build.environment] vars do not reach function runtime.
-// Real env vars always take precedence when present.
+// component. Credentials resolve in this order:
+//   1. Real environment variables (Netlify UI / .env.local) — always win.
+//   2. src/lib/env.gen.ts — baked at build time by scripts/gen-env.mjs from
+//      netlify.toml [build.environment] so deployed functions reach the DB
+//      even though those variables do not exist at function runtime.
+// With neither, hasSupabase is false and server components fall back to the
+// bundled seed data (builds never break).
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { GEN_SUPABASE_URL, GEN_SUPABASE_SERVICE_KEY } from '@/lib/env.gen';
 
-// Same credentials already shipped in netlify.toml inside this repo.
-const FALLBACK_URL = 'https://xycmzhpkuzyhmgucwqys.supabase.co';
-const FALLBACK_SERVICE =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh5Y216aHBrdXp5aG1ndWN3cXlzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDk0OTU0NywiZXhwIjoyMTA2NTI1NTQ3fQ.dPq4rgrBw4q0rSW_yiOhDihbszwEfvtFEjF-kejYpWE';
-
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL || FALLBACK_URL;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || FALLBACK_SERVICE;
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL || GEN_SUPABASE_URL;
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || GEN_SUPABASE_SERVICE_KEY;
 
 export const hasSupabase = Boolean(url && serviceKey);
 

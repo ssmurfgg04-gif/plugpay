@@ -81,10 +81,11 @@ export function PlugPayProvider({ children }) {
   const toggleFollowMerchant = useCallback(() => {
     setFollowing((f) => {
       const nv = !f;
-      showToast(nv ? "Following Wanjiku Electronics \u2713" : "Unfollowed Wanjiku Electronics");
+      const biz = viewedSeller?.profile?.bizName || sellerProfile.bizName || "this seller";
+      showToast(nv ? `Following ${biz} \u2713` : `Unfollowed ${biz}`);
       return nv;
     });
-  }, [showToast]);
+  }, [showToast, viewedSeller, sellerProfile.bizName]);
   const viewSellerProfile = useCallback(() => {
     setViewedSeller(null);
     openModal("modal-merchant");
@@ -365,29 +366,68 @@ export function PlugPayProvider({ children }) {
     );
   }, [riderRows, showToast]);
   const [merchantLoggedIn, setMerchantLoggedIn] = useState(false);
-  const [authMethod, setAuthMethodState] = useState("whatsapp");
-  const [authStep, setAuthStep] = useState("phone");
-  const [authPhone, setAuthPhone] = useState("");
-  const [authOtp, setAuthOtp] = useState("");
-  const [authPinLoginValue, setAuthPinLoginValue] = useState("");
-  const [authSetPinValue, setAuthSetPinValue] = useState("");
-  const [authHasPin, setAuthHasPin] = useState(false);
+  const [authStep, setAuthStep] = useState("email");
+  const [authRole, setAuthRole] = useState("trader");
+  const [authMode, setAuthMode] = useState("signin");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authBusinessName, setAuthBusinessName] = useState("");
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authError, setAuthError] = useState("");
   const finishLoginRef = useRef(null);
-  const authSetMethod = useCallback((m) => {
-    setAuthMethodState(m);
-    setAuthPhone("");
+  const authSetMode = useCallback((m) => {
+    setAuthMode(m === "register" ? "register" : "signin");
+    setAuthError("");
   }, []);
-  const openAuthModal = useCallback(() => {
-    claimTokenRef.current = null;
-    setClaimInfo(null);
-    setAuthStep("phone");
-    setAuthPhone("");
-    setAuthOtp("");
-    setAuthPinLoginValue("");
-    setAuthSetPinValue("");
-    authSetMethod("whatsapp");
-    openModal("modal-register");
-  }, [authSetMethod, openModal]);
+  const openAuthModal = useCallback(
+    (role) => {
+      claimTokenRef.current = null;
+      setClaimInfo(null);
+      setAuthStep("email");
+      setAuthRole(role === "landlord" || role === "agent" ? role : "trader");
+      setAuthMode("signin");
+      setAuthEmail("");
+      setAuthPassword("");
+      setAuthBusinessName("");
+      setAuthError("");
+      openModal("modal-register");
+    },
+    [openModal],
+  );
+  const authSubmit = useCallback(() => {
+    if (authBusy) return;
+    setAuthError("");
+    setAuthBusy(true);
+    const endpoint = authMode === "register" ? "/api/auth/register" : "/api/auth/login";
+    apiPost(endpoint, {
+      email: authEmail.trim(),
+      password: authPassword,
+      role: authRole,
+      businessName: authBusinessName.trim(),
+      ownerName: authBusinessName.trim(),
+    }).then((res) => {
+      setAuthBusy(false);
+      if (!res) {
+        setAuthError("Network error. Check your connection and try again.");
+        return;
+      }
+      if (res.ok === false) {
+        setAuthError(res.error || "Could not sign you in. Try again.");
+        return;
+      }
+      // Success: the session cookie is set server-side.
+      const slug = res.merchantSlug || null;
+      const role = res.role || authRole;
+      finishLoginRef.current && finishLoginRef.current(slug, role, res.email || authEmail.trim());
+    });
+  }, [authBusy, authMode, authEmail, authPassword, authRole, authBusinessName, showToast]);
+  const authLogout = useCallback(() => {
+    apiPost("/api/auth/logout", {});
+    setMerchantLoggedIn(false);
+    setSessionInfo(null);
+    showToast("Signed out");
+    navigate("/");
+  }, [showToast]);
   const requireSellerLogin = useCallback(
     (actionLabel) => {
       if (!merchantLoggedIn) {
@@ -399,75 +439,8 @@ export function PlugPayProvider({ children }) {
     },
     [merchantLoggedIn, openAuthModal, showToast],
   );
-  const authSendOTP = useCallback(() => {
-    const val = authPhone.trim() || "07XX XXX XXX";
-    const fallback = () => {
-      showToast(`OTP sent to ${val} via ${authMethod === "sms" ? "SMS" : "WhatsApp"} \u2713`);
-      setAuthStep("otp");
-    };
-    apiPost("/api/auth/send-otp", { phone: val }).then((res) => {
-      if (res && res.ok === false) {
-        showToast(res.error || "Check the number and try again");
-        return;
-      }
-      if (res && res.ok && res.demoCode) setAuthOtp(String(res.demoCode));
-      fallback();
-    });
-  }, [authMethod, authPhone, showToast]);
-  const authVerifyOTP = useCallback(() => {
-    const proceed = () => {
-      if (!authHasPin) {
-        showToast("Verified \u2713");
-        setAuthStep("setpin");
-      } else {
-        showToast("Verified \u2713 Loading your stall profile\u2026");
-        finishLoginRef.current && finishLoginRef.current();
-      }
-    };
-    apiPost("/api/auth/verify-otp", { phone: authPhone.trim(), code: authOtp.trim() }).then((res) => {
-      if (res && res.ok === false) {
-        showToast(res.error || "Wrong or expired code");
-        return;
-      }
-      proceed();
-    });
-  }, [authHasPin, authOtp, authPhone, showToast]);
-  const authSetPin = useCallback(() => {
-    if (!/^\d{6}$/.test(authSetPinValue.trim())) {
-      showToast("Enter a 6-digit PIN");
-      return;
-    }
-    setAuthHasPin(true);
-    showToast("PIN set \u2713 Use it next time to unlock your profile instantly.");
-    apiPost("/api/auth/set-pin", { pin: authSetPinValue.trim() });
-    finishLoginRef.current && finishLoginRef.current();
-  }, [authSetPinValue, showToast]);
-  const authShowPinLogin = useCallback(() => setAuthStep("pinlogin"), []);
-  const authGoBackFromPin = useCallback(() => setAuthStep("phone"), []);
-  const authPinLogin = useCallback(() => {
-    if (!/^\d{6}$/.test(authPinLoginValue.trim())) {
-      showToast("Enter your 6-digit PIN");
-      return;
-    }
-    const proceed = () => {
-      setAuthHasPin(true);
-      showToast("Unlocked \u2713 Loading your stall profile\u2026");
-      finishLoginRef.current && finishLoginRef.current();
-    };
-    const phone = digitsOnly(authPhone);
-    if (phone.length === 10) {
-      apiPost("/api/auth/pin-login", { phone: phone, pin: authPinLoginValue.trim(), role: "trader" }).then((res) => {
-        if (res && res.ok === false) {
-          showToast(res.error || "PIN does not match. Use the one-time code instead.");
-          return;
-        }
-        proceed();
-      });
-    } else {
-      proceed();
-    }
-  }, [authPhone, authPinLoginValue, showToast]);
-  const authGoBack = useCallback(() => setAuthStep("phone"), []);
+  const [sessionInfo, setSessionInfo] = useState(null);
+  const authGoBack = useCallback(() => setAuthStep("email"), []);
   const [docStatus, setDocStatus] = useState({});
   const fakeUpload = useCallback(
     (key, name) => {
@@ -548,31 +521,12 @@ export function PlugPayProvider({ children }) {
       },
     ]);
   }, []);
-  const [receiptsList, setReceiptsList] = usePersisted("receipts", () => ppDemoSales().receipts);
-  const [invoicesList, setInvoicesList] = usePersisted("invoices", () => ppDemoSales().invoices);
-  useEffect(() => {
-    try {
-      if (window.localStorage.getItem("pp6:demoSalesSeeded")) return;
-      window.localStorage.setItem("pp6:demoSalesSeeded", "1");
-    } catch (e) {
-      return;
-    }
-    const d = ppDemoSales();
-    setReceiptsList((l) => l.concat(d.receipts.filter((x) => !l.some((y) => y.code === x.code))));
-    setInvoicesList((l) => l.concat(d.invoices.filter((x) => !l.some((y) => y.token === x.token))));
-  }, []);
+  const [receiptsList, setReceiptsList] = usePersisted("receipts", []);
+  const [invoicesList, setInvoicesList] = usePersisted("invoices", []);
   const catIdRef = useRef(1);
-  const [catalogueItems, setCatalogueItems] = usePersisted("catalogue", () =>
-    PRODUCTS.map((p) => ({
-      id: "ci" + catIdRef.current++,
-      icon: p.icon,
-      image: "",
-      name: p.name,
-      price: p.price.replace(/[^0-9]/g, ""),
-      category: p.cat,
-      stock: parseInt(p.stock, 10) || 0,
-    })),
-  );
+  // A new account starts with an EMPTY catalogue. Products are added by the
+  // seller (and persisted to the database through /api/products).
+  const [catalogueItems, setCatalogueItems] = usePersisted("catalogue", []);
   stockRef.current = catalogueItems;
   invoicesListRef.current = invoicesList;
   const addCatalogueItem = useCallback(
@@ -581,19 +535,37 @@ export function PlugPayProvider({ children }) {
         showToast("Enter a product name and price");
         return false;
       }
-      setCatalogueItems((c) => [
-        {
-          id: "ci" + Date.now().toString(36) + catIdRef.current++,
-          icon: "\u{1F4E6}",
-          image: item.image || "",
-          name: item.name.trim(),
-          price: String(item.price),
-          category: (item.category || "").trim() || "General",
-          stock: Number(item.stock) || 0,
-        },
-        ...c,
-      ]);
-      showToast(`${item.name} added to your catalogue \u2713`);
+      const localId = "ci" + Date.now().toString(36) + catIdRef.current++;
+      const record = {
+        id: localId,
+        icon: "\u{1F4E6}",
+        image: item.image || "",
+        name: String(item.name).trim(),
+        price: String(item.price),
+        category: (item.category || "").trim() || "General",
+        stock: Number(item.stock) || 0,
+      };
+      setCatalogueItems((c) => [record, ...c]);
+      showToast(`${record.name} added to your catalogue \u2713`);
+      // Persist server-side; swap the local id for the database id when done.
+      fetch("/api/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: record.name,
+          price: Number(record.price) || 0,
+          stock: record.stock,
+          category: record.category,
+          image: record.image,
+        }),
+      })
+        .then((r) => r.json())
+        .then((res) => {
+          if (res && res.ok && res.product?.id) {
+            setCatalogueItems((c) => c.map((x) => (x.id === localId ? { ...x, dbId: res.product.id } : x)));
+          }
+        })
+        .catch(() => {});
       return true;
     },
     [showToast],
@@ -614,26 +586,30 @@ export function PlugPayProvider({ children }) {
     (id) => {
       setCatalogueItems((c) => c.filter((x) => x.id !== id));
       showToast("Product removed");
+      const item = catalogueItems.filter((x) => x.id === id)[0];
+      const dbId = item && (item.dbId || (String(item.id).startsWith("db") ? String(item.id).slice(2) : ""));
+      if (dbId) {
+        fetch("/api/products?id=" + encodeURIComponent(dbId), { method: "DELETE" }).catch(() => {});
+      }
     },
-    [showToast],
+    [showToast, catalogueItems],
   );
   const [sellerProfile, setSellerProfile] = usePersisted("seller", {
-    bizName: "Wanjiku Electronics",
-    ownerName: "Jane Wanjiku",
-    role: "Electronics Retailer",
-    bio: "Specializing in phones, laptops & repairs. In business since 2016.",
-    street: "Moi Avenue, Nairobi CBD",
-    phone: "+254 712 345 678",
-    established: "2016 \xB7 8 years in business",
-    whatsapp: "+254 712 345 678",
-    instagram: "@wanjiku.electronics",
-    tiktok: "@wanjikuelectronics",
-    facebook: "/WanjikuElectronics",
-    paybill: "2332323",
-    account: "20262026",
-    about:
-      "We specialize in selling and repairing electronics, computers, and mobile phones. All products come with a 30-day warranty. Delivery available across Kenya via M-Pesa payment.",
-    llPhoneVerified: true,
+    bizName: "",
+    ownerName: "",
+    role: "",
+    bio: "",
+    street: "",
+    phone: "",
+    established: "",
+    whatsapp: "",
+    instagram: "",
+    tiktok: "",
+    facebook: "",
+    paybill: "",
+    account: "",
+    about: "",
+    llPhoneVerified: false,
   });
   const updateSellerProfile = useCallback(
     (patch) => {
@@ -642,6 +618,34 @@ export function PlugPayProvider({ children }) {
         ...patch,
       }));
       showToast("Profile updated \u2713");
+      // Persist to the seller's own merchant row (ownership via session).
+      const fieldMap = {
+        bizName: "business_name",
+        ownerName: "owner_name",
+        role: "category",
+        street: "street",
+        phone: "phone",
+        whatsapp: "whatsapp",
+        bio: "bio",
+        about: "about",
+        instagram: "instagram",
+        tiktok: "tiktok",
+        facebook: "facebook",
+        paybill: "mpesa_paybill",
+        account: "mpesa_account",
+      };
+      const apiPatch = {};
+      Object.keys(fieldMap).forEach((k) => {
+        if (patch[k] !== undefined) apiPatch[fieldMap[k]] = patch[k];
+      });
+      if (patch.establishedYear !== undefined) apiPatch.established_year = patch.establishedYear;
+      if (Object.keys(apiPatch).length) {
+        fetch("/api/seller/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(apiPatch),
+        }).catch(() => {});
+      }
     },
     [showToast],
   );
@@ -666,7 +670,24 @@ export function PlugPayProvider({ children }) {
     },
     [showToast],
   );
-  finishLoginRef.current = () => {
+  finishLoginRef.current = (slug, role, email) => {
+    setSessionInfo({ merchantSlug: slug || null, role: role || "trader", email: email || "" });
+    if ((role || "trader") === "landlord") {
+      setLlAuthed(true);
+      closeModal("modal-register");
+      closeModal("modal-landlord");
+      navigate("/landlord/dashboard");
+      return;
+    }
+    if (role === "agent") {
+      setObAgentGate(false);
+      setObAgentPhoneStep(false);
+      setObStep_(1);
+      closeModal("modal-register");
+      showToast("Signed in as agent \u2713");
+      navigate("/agent");
+      return;
+    }
     setMerchantLoggedIn(true);
     const tok = claimTokenRef.current;
     if (tok) {
@@ -695,25 +716,28 @@ export function PlugPayProvider({ children }) {
     .filter((r) => r.review)
     .map((r) => r.review)
     .sort((a, b) => new Date(b.at) - new Date(a.at));
+  // Real numbers only. A new seller starts at zero; trust grows with real
+  // receipts and reviews — no baseline inflation.
   const sellerStats = (() => {
-    const sum = sellerReviews.reduce((t, r) => t + r.rating, 0);
-    const reviewCount = 156 + sellerReviews.length;
-    const avg = (4.8 * 156 + sum) / reviewCount;
-    const sales = 105 + sentReceipts.length;
-    const trust = Math.min(99, Math.round(53 + (avg / 5) * 25 + Math.min(18, sales / 15)));
+    const count = sellerReviews.length;
+    const sum = sellerReviews.reduce((t, r) => t + (Number(r.rating) || 0), 0);
+    const avg = count ? sum / count : 0;
+    const sales = sentReceipts.length;
+    const trust = Math.min(99, Math.round(20 + (avg / 5) * 30 + Math.min(30, sales * 2) + Math.min(19, count * 3)));
     const dist = {
-      5: 128,
-      4: 17,
-      3: 7,
-      2: 3,
-      1: 1,
+      5: 0,
+      4: 0,
+      3: 0,
+      2: 0,
+      1: 0,
     };
     sellerReviews.forEach((r) => {
-      dist[r.rating] = (dist[r.rating] || 0) + 1;
+      const k = Math.min(5, Math.max(1, Math.round(Number(r.rating) || 0)));
+      dist[k] = (dist[k] || 0) + 1;
     });
     return {
       avg,
-      reviewCount,
+      reviewCount: count,
       sales,
       trust,
       dist,
@@ -1021,12 +1045,16 @@ export function PlugPayProvider({ children }) {
     };
   };
   const [obAgentGate, setObAgentGate] = useState(true);
-  const [obAgentMethod, setObAgentMethodState] = useState("sms");
   const [obAgentPhoneStep, setObAgentPhoneStep] = useState(true);
-  const [obAgentPhone, setObAgentPhone] = useState("");
-  const [obAgentOtp, setObAgentOtp] = useState("");
-  const [obAgentSending, setObAgentSending] = useState(false);
-  const [obAgentVerifying, setObAgentVerifying] = useState(false);
+  const [obAgentEmail, setObAgentEmail] = useState("");
+  const [obAgentPassword, setObAgentPassword] = useState("");
+  const [obAgentMode, setObAgentMode] = useState("signin");
+  const [obAgentError, setObAgentError] = useState("");
+  const [obAgentBusy, setObAgentBusy] = useState(false);
+  const obAgentSending = obAgentBusy;
+  const obAgentVerifying = obAgentBusy;
+  const setObAgentSending = setObAgentBusy;
+  const setObAgentVerifying = setObAgentBusy;
   const [obStep_, setObStep_] = useState(1);
   const [obBldgName, setObBldgName] = useState("");
   const [obFloorsCount, setObFloorsCount] = useState("6");
@@ -1043,70 +1071,49 @@ export function PlugPayProvider({ children }) {
   const [obNewType, setObNewType] = useState("Fashion");
   const [obNewExtra, setObNewExtra] = useState({});
   const obAgentSetMethod = useCallback((m) => {
-    setObAgentMethodState(m);
-    setObAgentPhone("");
+    // Kept for layout compatibility: the gate no longer picks a delivery
+    // method, it toggles sign-in / create-account.
+    setObAgentMode(m === "register" ? "register" : "signin");
+    setObAgentError("");
   }, []);
   const openOnboard = useCallback(() => {
     openModal("modal-onboard");
     setObAgentGate(true);
     setObAgentPhoneStep(true);
-    setObAgentPhone("");
-    setObAgentOtp("");
-    obAgentSetMethod("sms");
+    setObAgentEmail("");
+    setObAgentPassword("");
+    setObAgentError("");
+    setObAgentMode("signin");
     setObMerchantList(seedObMerchants);
     setObEditingMerchantId(null);
     setObStep_(1);
-  }, [obAgentSetMethod, openModal]);
+  }, [openModal]);
   const obAgentSendOtp = useCallback(() => {
-    if (!obAgentPhone.trim()) {
-      showToast(obAgentMethod === "email" ? "Enter your email address" : "Enter your phone number");
+    // Agent sign-in: email + password (no OTP).
+    if (obAgentBusy) return;
+    if (!obAgentEmail.trim() || !obAgentPassword) {
+      setObAgentError("Enter your email and password");
       return;
     }
-    setObAgentSending(true);
-    if (obAgentMethod === "email") {
-      setTimeout(() => {
-        setObAgentSending(false);
-        setObAgentPhoneStep(false);
-        showToast("OTP sent via email \u2713");
-      }, 500);
-      return;
-    }
-    apiPost("/api/auth/send-otp", { phone: obAgentPhone.trim() }).then((res) => {
-      setObAgentSending(false);
-      if (res && res.ok === false) {
-        showToast(res.error || "Check the number and try again");
+    setObAgentBusy(true);
+    setObAgentError("");
+    apiPost(obAgentMode === "register" ? "/api/auth/register" : "/api/auth/login", {
+      email: obAgentEmail.trim(),
+      password: obAgentPassword,
+      role: "agent",
+    }).then((res) => {
+      setObAgentBusy(false);
+      if (!res || res.ok === false) {
+        setObAgentError((res && res.error) || "Could not sign you in. Try again.");
         return;
       }
-      if (res && res.ok && res.demoCode) setObAgentOtp(String(res.demoCode));
-      setObAgentPhoneStep(false);
-      showToast("OTP sent via SMS \u2713");
-    });
-  }, [obAgentMethod, obAgentPhone, showToast]);
-  const obAgentVerifyOtp = useCallback(() => {
-    if (!obAgentOtp.trim() || obAgentOtp.trim().length < 4) {
-      showToast("Enter the OTP");
-      return;
-    }
-    setObAgentVerifying(true);
-    const proceed = () => {
+      setSessionInfo({ merchantSlug: null, role: "agent", email: res.email || obAgentEmail.trim() });
       setObAgentVerifying(false);
       showToast("Signed in as agent \u2713");
       setObAgentGate(false);
       setObStep_(1);
-    };
-    if (obAgentMethod === "email") {
-      setTimeout(proceed, 500);
-      return;
-    }
-    apiPost("/api/auth/verify-otp", { phone: obAgentPhone.trim(), code: obAgentOtp.trim() }).then((res) => {
-      if (res && res.ok === false) {
-        setObAgentVerifying(false);
-        showToast(res.error || "Wrong or expired code");
-        return;
-      }
-      proceed();
     });
-  }, [obAgentMethod, obAgentOtp, obAgentPhone, showToast]);
+  }, [obAgentBusy, obAgentMode, obAgentEmail, obAgentPassword, showToast]);
   const setObFloorStall = useCallback((key, v) => {
     setObFloorStallsState((s) => ({
       ...s,
@@ -1517,53 +1524,18 @@ export function PlugPayProvider({ children }) {
             },
       );
   };
-  const [llMethod, setLlMethodState] = useState("sms");
-  const [llStep, setLlStep] = useState("phone");
+  const [llStep, setLlStep] = useState("email");
   const [llAuthed, setLlAuthed] = useState(false);
-  const [llPhone, setLlPhone] = useState("");
-  const [llOtp, setLlOtp] = useState("");
-  const [llPinLoginPhone, setLlPinLoginPhone] = useState("");
-  const [llPinLoginPin, setLlPinLoginPin] = useState("");
-  const [llSetPinValue, setLlSetPinValue] = useState("");
-  const [llHasPin, setLlHasPin] = useState(false);
-  const llSetMethod = useCallback((m) => {
-    setLlMethodState(m);
-    setLlPhone("");
-  }, []);
+  const llGoBack = useCallback(() => setLlStep("email"), []);
   const openLandlordModal = useCallback(() => {
     if (llAuthed) {
       navigate("/landlord/dashboard");
       return;
     }
-    setLlStep("phone");
-    setLlPhone("");
-    setLlOtp("");
-    setLlPinLoginPhone("");
-    setLlPinLoginPin("");
-    setLlSetPinValue("");
-    llSetMethod("sms");
-    openModal("modal-landlord");
-  }, [llAuthed, llSetMethod, openModal]);
-  const llSendOTP = useCallback(() => {
-    const val = llPhone.trim() || (llMethod === "email" ? "you@email.com" : "07XX XXX XXX");
-    const fallback = () => {
-      showToast(`OTP sent to ${val} via ${llMethod === "email" ? "email" : "SMS"} \u2713`);
-      setLlStep("otp");
-    };
-    if (llMethod === "email") {
-      fallback();
-      return;
-    }
-    apiPost("/api/auth/send-otp", { phone: val }).then((res) => {
-      if (res && res.ok === false) {
-        showToast(res.error || "Check the number and try again");
-        return;
-      }
-      if (res && res.ok && res.demoCode) setLlOtp(String(res.demoCode));
-      fallback();
-    });
-  }, [llMethod, llPhone, showToast]);
-  const llGoBack = useCallback(() => setLlStep("phone"), []);
+    // Landlords use the same email + password auth as every other portal;
+    // the modal hosts the shared AuthEmailStep with the landlord role.
+    openAuthModal("landlord");
+  }, [llAuthed, openAuthModal]);
   const emptyLb = {
     pending: [],
     verified: [],
@@ -1573,81 +1545,77 @@ export function PlugPayProvider({ children }) {
   };
   const [lbAccounts, setLbAccounts] = usePersisted("lbaccounts", initialLbAccounts);
   const [lbData, setLbData] = usePersisted("lbdata", initialLbData);
-  // One-shot hydration from the backend: merge DB rows into the local store
-  // without clobbering anything the user already created on this device.
+  // Boot restore: check the session cookie, then hydrate ONLY the signed-in
+  // user's own records from the backend. Anonymous visitors get the public
+  // directory — never another merchant's data.
   useEffect(() => {
     if (BOOT_SYNC.done) return;
     BOOT_SYNC.done = true;
-    fetch("/api/bootstrap")
+    fetch("/api/auth/session")
       .then((r) => r.json())
-      .then((d) => {
-        if (!d || !d.ok) return;
-        try {
-          setReceiptsList((l) => {
-            const have = new Set(l.map((x) => x.code));
-            const add = (d.receipts || []).filter((x) => x.code && !have.has(x.code));
-            return add.length ? add.concat(l) : l;
-          });
-          setInvoicesList((l) => {
-            const have = new Set(l.map((x) => x.token));
-            const add = (d.invoices || []).filter((x) => x.token && !have.has(x.token));
-            return add.length ? add.concat(l) : l;
-          });
-          setCatalogueItems((l) => {
-            const have = new Set(l.map((x) => x.name));
-            const add = (d.catalogue || []).filter((x) => x.name && !have.has(x.name));
-            return add.length ? l.concat(add) : l;
-          });
-          setAgentClaims((l) => {
-            const have = new Set(l.map((x) => x.token));
-            const add = (d.claims || []).filter((x) => x.token && !have.has(x.token) && !x.draft);
-            return add.length ? add.concat(l) : l;
-          });
-          setRiders((l) => {
-            const have = new Set(l.map((x) => x.name));
-            const add = (d.riders || []).filter((x) => x.name && !have.has(x.name));
-            return add.length ? l.concat(add) : l;
-          });
-          if (
-            JSON.stringify(lbAccounts) === JSON.stringify(initialLbAccounts) &&
-            (d.lbAccounts || []).length
-          ) {
-            setLbAccounts(d.lbAccounts);
-            if (d.lbData && Object.keys(d.lbData).length) setLbData(d.lbData);
+      .then((s) => {
+        if (s && s.ok && s.signedIn) {
+          setSessionInfo({ merchantSlug: s.merchantSlug || null, role: s.role || "trader", email: s.email || "" });
+          if (s.role === "landlord") setLlAuthed(true);
+          if (s.role === "agent") {
+            setObAgentGate(false);
+            setObAgentPhoneStep(false);
           }
-          if (
-            d.seller &&
-            sellerProfile.bizName === "Wanjiku Electronics" &&
-            sellerProfile.ownerName === "Jane Wanjiku"
-          ) {
-            const sp = d.seller;
-            const yr = Number(sp.established_year) || 0;
-            setSellerProfile(
-              Object.assign({}, sellerProfile, {
-                bizName: sp.business_name || "",
-                ownerName: sp.owner_name || "",
-                role: sp.role || "",
-                bio: sp.bio || "",
-                about: sp.about || "",
-                street: sp.street || "",
-                phone: sp.phone || "",
-                whatsapp: sp.whatsapp || "",
-                instagram: sp.instagram || "",
-                tiktok: sp.tiktok || "",
-                facebook: sp.facebook || "",
-                paybill: sp.mpesa_paybill || "",
-                account: sp.mpesa_account || "",
-                llPhoneVerified: !!sp.ll_phone_verified,
-                established: yr
-                  ? yr + " \u00b7 " + (new Date().getFullYear() - yr) + " years in business"
-                  : "",
-              }),
-            );
-          }
-        } catch (e) {}
+          if (s.role === "trader" && s.merchantSlug) setMerchantLoggedIn(true);
+        }
       })
-      .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      .catch(() => {})
+      .finally(() => {
+        fetch("/api/bootstrap")
+          .then((r) => r.json())
+          .then((d) => {
+            if (!d || !d.ok) return;
+            try {
+              if (d.session && d.session.merchantSlug) {
+                // Signed in: the database is the source of truth for own records.
+                if (Array.isArray(d.receipts)) setReceiptsList(d.receipts);
+                if (Array.isArray(d.invoices)) setInvoicesList(d.invoices);
+                if (Array.isArray(d.catalogue)) setCatalogueItems(d.catalogue);
+                if (Array.isArray(d.riders)) setRiders(d.riders);
+              }
+              if (d.session && d.session.role === "agent" && Array.isArray(d.claims)) {
+                setAgentClaims(d.claims);
+              }
+              if (d.session && d.session.role === "landlord") {
+                if ((d.lbAccounts || []).length) {
+                  setLbAccounts(d.lbAccounts);
+                  if (d.lbData && Object.keys(d.lbData).length) setLbData(d.lbData);
+                }
+              }
+              if (d.seller) {
+                const sp = d.seller;
+                const yr = Number(sp.established_year) || 0;
+                setSellerProfile((p) =>
+                  Object.assign({}, p, {
+                    bizName: sp.business_name || "",
+                    ownerName: sp.owner_name || "",
+                    role: sp.role || "",
+                    bio: sp.bio || "",
+                    about: sp.about || "",
+                    street: sp.street || "",
+                    phone: sp.phone || "",
+                    whatsapp: sp.whatsapp || "",
+                    instagram: sp.instagram || "",
+                    tiktok: sp.tiktok || "",
+                    facebook: sp.facebook || "",
+                    paybill: sp.mpesa_paybill || "",
+                    account: sp.mpesa_account || "",
+                    llPhoneVerified: !!sp.ll_phone_verified,
+                    established: yr
+                      ? yr + " \u00b7 " + (new Date().getFullYear() - yr) + " years in business"
+                      : "",
+                  }),
+                );
+              }
+            } catch (e) {}
+          })
+          .catch(() => {});
+      });
   }, []);
   const [lbActiveId, setLbActiveId] = useState("lb1");
   const lbActive = lbAccounts.filter((a) => a.id === lbActiveId)[0] || lbAccounts[0];
@@ -1673,67 +1641,6 @@ export function PlugPayProvider({ children }) {
     closeModal("modal-landlord");
     navigate("/landlord/dashboard");
   };
-  const llVerifyOTP = useCallback(() => {
-    const proceed = () => {
-      if (!llHasPin) {
-        showToast("Verified \u2713");
-        setLlStep("setpin");
-      } else {
-        showToast("Verified \u2713 Loading your building dashboard\u2026");
-        llEnterDashboard();
-      }
-    };
-    if (llMethod === "email") {
-      proceed();
-      return;
-    }
-    apiPost("/api/auth/verify-otp", { phone: llPhone.trim(), code: llOtp.trim() }).then((res) => {
-      if (res && res.ok === false) {
-        showToast(res.error || "Wrong or expired code");
-        return;
-      }
-      proceed();
-    });
-  }, [llHasPin, llMethod, llOtp, llPhone, showToast]);
-  const llSetPin = useCallback(() => {
-    if (!/^\d{6}$/.test(llSetPinValue.trim())) {
-      showToast("Enter a 6-digit PIN");
-      return;
-    }
-    setLlHasPin(true);
-    showToast("PIN set \u2713 You can sign in with your phone + PIN next time.");
-    apiPost("/api/auth/set-pin", { pin: llSetPinValue.trim() });
-    llEnterDashboard();
-  }, [llSetPinValue, showToast]);
-  const llShowPinLogin = useCallback(() => setLlStep("pinlogin"), []);
-  const llGoBackFromPin = useCallback(() => setLlStep("phone"), []);
-  const llPinLogin = useCallback(() => {
-    if (!llPinLoginPhone.trim()) {
-      showToast("Enter your phone number");
-      return;
-    }
-    if (!/^\d{6}$/.test(llPinLoginPin.trim())) {
-      showToast("Enter your 6-digit PIN");
-      return;
-    }
-    const proceed = () => {
-      setLlHasPin(true);
-      showToast("Signed in \u2713 Loading your building dashboard\u2026");
-      llEnterDashboard();
-    };
-    const phone = digitsOnly(llPinLoginPhone);
-    if (phone.length === 10) {
-      apiPost("/api/auth/pin-login", { phone: phone, pin: llPinLoginPin.trim(), role: "landlord" }).then((res) => {
-        if (res && res.ok === false) {
-          showToast(res.error || "PIN does not match. Use the one-time code instead.");
-          return;
-        }
-        proceed();
-      });
-    } else {
-      proceed();
-    }
-  }, [llPinLoginPhone, llPinLoginPin, showToast]);
   const [asStall, setAsStall] = useState(null);
   const [asName, setAsName] = useState("");
   const [asPhone, setAsPhone] = useState("");
@@ -1965,23 +1872,21 @@ export function PlugPayProvider({ children }) {
     merchantLoggedIn,
     requireSellerLogin,
     openAuthModal,
-    authMethod,
-    authSetMethod,
     authStep,
-    authPhone,
-    setAuthPhone,
-    authOtp,
-    setAuthOtp,
-    authPinLoginValue,
-    setAuthPinLoginValue,
-    authSetPinValue,
-    setAuthSetPinValue,
-    authSendOTP,
-    authVerifyOTP,
-    authSetPin,
-    authShowPinLogin,
-    authGoBackFromPin,
-    authPinLogin,
+    authRole,
+    authMode,
+    authSetMode,
+    authEmail,
+    setAuthEmail,
+    authPassword,
+    setAuthPassword,
+    authBusinessName,
+    setAuthBusinessName,
+    authBusy,
+    authError,
+    authSubmit,
+    authLogout,
+    sessionInfo,
     authGoBack,
     docStatus,
     fakeUpload,
@@ -2010,17 +1915,17 @@ export function PlugPayProvider({ children }) {
     receipt,
     openOnboard,
     obAgentGate,
-    obAgentMethod,
+    obAgentMode,
     obAgentSetMethod,
     obAgentPhoneStep,
-    obAgentPhone,
-    setObAgentPhone,
-    obAgentOtp,
-    setObAgentOtp,
+    obAgentEmail,
+    setObAgentEmail,
+    obAgentPassword,
+    setObAgentPassword,
+    obAgentError,
     obAgentSending,
     obAgentVerifying,
     obAgentSendOtp,
-    obAgentVerifyOtp,
     obStep_,
     obGoToStep,
     obStep,
@@ -2061,28 +1966,10 @@ export function PlugPayProvider({ children }) {
     lbSwitch,
     llAddBuilding,
     landlordVerifyPending,
-    llMethod,
-    llSetMethod,
     llStep,
     llAuthed,
     openLandlordModal,
-    llPhone,
-    setLlPhone,
-    llOtp,
-    setLlOtp,
-    llPinLoginPhone,
-    setLlPinLoginPhone,
-    llPinLoginPin,
-    setLlPinLoginPin,
-    llSetPinValue,
-    setLlSetPinValue,
-    llSendOTP,
     llGoBack,
-    llVerifyOTP,
-    llSetPin,
-    llShowPinLogin,
-    llGoBackFromPin,
-    llPinLogin,
     pendingTraders,
     verifiedTraders,
     vacatedTraders,
@@ -2103,50 +1990,6 @@ export function PlugPayProvider({ children }) {
   return <PlugPayContext.Provider value={value}>{children}</PlugPayContext.Provider>;
 }
 
-var PRODUCTS = [
-  {
-    icon: "\u{1F4F1}",
-    name: "Samsung Galaxy A15",
-    price: "KSh 18,500",
-    stock: "4 in stock",
-    cat: "Phones",
-  },
-  {
-    icon: "\u{1F4BB}",
-    name: "HP 250 G8 Laptop",
-    price: "KSh 42,000",
-    stock: "2 in stock",
-    cat: "Laptops",
-  },
-  {
-    icon: "\u{1F50C}",
-    name: "USB-C Charger 65W",
-    price: "KSh 1,200",
-    stock: "20 in stock",
-    cat: "Accessories",
-  },
-  {
-    icon: "\u{1F4F1}",
-    name: "Tecno Camon 20",
-    price: "KSh 22,000",
-    stock: "3 in stock",
-    cat: "Phones",
-  },
-  {
-    icon: "\u{1F5A5}\uFE0F",
-    name: "Dell Inspiron 3511",
-    price: "KSh 55,000",
-    stock: "1 in stock",
-    cat: "Laptops",
-  },
-  {
-    icon: "\u{1F3A7}",
-    name: "Wireless Earbuds",
-    price: "KSh 2,800",
-    stock: "12 in stock",
-    cat: "Accessories",
-  },
-];
 
 var STALL_POOL = [
   ["Njeri Fashions", "Fashion"],
@@ -2389,160 +2232,6 @@ function waInvoiceText(inv, seller) {
   );
 }
 
-function ppDemoSales() {
-  var DAY = 86400000,
-    now = Date.now();
-  function ago(d, hrs) {
-    return new Date(now - d * DAY - (hrs || 0) * 3600000).toISOString();
-  }
-  function it(name, qty, unit) {
-    return {
-      name: name,
-      qty: qty,
-      unit: unit,
-      price: qty * unit,
-      productId: "",
-      category: "",
-    };
-  }
-  function sum(items) {
-    return items.reduce(function (t, i) {
-      return t + i.price;
-    }, 0);
-  }
-  function rc(code, ref, name, phone, items, days, status, sent) {
-    return {
-      code: code,
-      demo: true,
-      buyerName: name,
-      buyerPhone: phone,
-      paymentRef: ref,
-      items: items,
-      total: sum(items),
-      createdAt: ago(days, 2),
-      sentAt: sent ? ago(days, 1) : null,
-      stockApplied: !!sent,
-      review: null,
-      docStatus: status,
-    };
-  }
-  function iv(num, name, phone, items, days, status) {
-    return {
-      token: num,
-      number: num,
-      demo: true,
-      buyerName: name,
-      buyerPhone: phone,
-      source: "WhatsApp",
-      items: items,
-      total: sum(items),
-      status: "PENDING",
-      docStatus: status,
-      createdAt: ago(days, 3),
-    };
-  }
-  return {
-    receipts: [
-      rc(
-        "RCP-001",
-        "TKA3F8M2QD",
-        "Grace Wanjiku",
-        "0712 345 601",
-        [it("Samsung Galaxy A15", 1, 18500)],
-        1,
-        "COMPLETE",
-        true,
-      ),
-      rc(
-        "RCP-002",
-        "TKA3F9L7ZX",
-        "Brian Otieno",
-        "0722 118 402",
-        [it("Wireless Earbuds", 2, 2800), it("USB-C Charger 65W", 3, 1200)],
-        2,
-        "COMPLETE",
-        true,
-      ),
-      rc(
-        "RCP-003",
-        "TKB1N4C6RW",
-        "Faith Njeri",
-        "0733 904 117",
-        [
-          it("Wireless Earbuds", 2, 2800),
-          it("USB-C Charger 65W", 2, 1200),
-          it("Phone screen replacement", 1, 6300),
-        ],
-        3,
-        "COMPLETE",
-        true,
-      ),
-      rc(
-        "RCP-004",
-        "TKB2P7D9HS",
-        "Samuel Kiptoo",
-        "0745 660 230",
-        [it("Wireless Earbuds", 2, 2800), it("Phone case", 2, 1000)],
-        4,
-        "PENDING",
-        false,
-      ),
-      rc(
-        "RCP-005",
-        "TKB3Q5E1JV",
-        "Mercy Akinyi",
-        "0701 552 889",
-        [it("USB-C Charger 65W", 5, 1200), it("Laptop bag", 1, 3500), it("Wireless mouse", 1, 2600)],
-        5,
-        "PENDING",
-        false,
-      ),
-    ],
-    invoices: [
-      iv(
-        "INV-001",
-        "Daniel Mwangi",
-        "0711 207 944",
-        [it("Tecno Camon 20", 1, 22000), it("USB-C Charger 65W", 1, 1200), it("Phone case", 1, 1300)],
-        2,
-        "COMPLETE",
-      ),
-      iv(
-        "INV-002",
-        "Esther Chebet",
-        "0723 481 075",
-        [
-          it("Wireless Earbuds", 2, 2800),
-          it("USB-C Charger 65W", 1, 1200),
-          it("Power bank 10,000mAh", 1, 5000),
-        ],
-        3,
-        "COMPLETE",
-      ),
-      iv(
-        "INV-003",
-        "Kevin Omondi",
-        "0734 612 380",
-        [
-          it("SSD 256GB", 1, 6500),
-          it("RAM 8GB DDR4", 1, 5200),
-          it("Windows install & setup", 1, 3500),
-          it("Laptop bag", 1, 3500),
-        ],
-        1,
-        "PENDING",
-      ),
-      iv(
-        "INV-004",
-        "Lucy Wambui",
-        "0768 190 523",
-        [it("Wireless Earbuds", 2, 2800), it("Screen guard", 4, 1000)],
-        0,
-        "PENDING",
-      ),
-    ],
-  };
-}
 
 /* ---- Stages (buildings, floors and stalls, merchants, review) ---- */
 /* ---- Stages (buildings, floors and stalls, merchants, review) ---- */

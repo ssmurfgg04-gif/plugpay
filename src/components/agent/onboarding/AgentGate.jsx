@@ -2,20 +2,18 @@
 
 import { usePlugPay } from "@/store/context";
 
-/* ---- Agent sign-in gate ---- */
+/* ---- Agent sign-in gate: email + password (no OTP) ---- */
 export function AgentGate() {
   const {
-    obAgentMethod,
+    obAgentMode,
     obAgentSetMethod,
-    obAgentPhoneStep,
-    obAgentPhone,
-    setObAgentPhone,
-    obAgentOtp,
-    setObAgentOtp,
+    obAgentEmail,
+    setObAgentEmail,
+    obAgentPassword,
+    setObAgentPassword,
+    obAgentError,
     obAgentSending,
-    obAgentVerifying,
     obAgentSendOtp,
-    obAgentVerifyOtp,
     closeModal,
     openLandlordModal,
   } = usePlugPay();
@@ -24,63 +22,75 @@ export function AgentGate() {
       <div className="ob-agent-icon">{"\u{1F4CD}"}</div>
       <div className="ob-agent-title">Agent sign-in required</div>
       <div className="ob-agent-sub">
-        Verify with your email or phone to onboard a building. Every stall you register is tied to your agent
-        ID for accountability.
+        Sign in with your email and password to onboard a building. Every stall you register is tied to
+        your agent ID for accountability.
       </div>
-      <div className="method-toggle">
+      <div className="method-toggle" role="tablist" aria-label="Sign in or create account">
         <button
           type="button"
-          className={`method-toggle-btn${obAgentMethod === "sms" ? " active" : ""}`}
-          onClick={() => obAgentSetMethod("sms")}
+          className={`method-toggle-btn${obAgentMode === "signin" ? " active" : ""}`}
+          onClick={() => obAgentSetMethod("signin")}
         >
-          {"\u{1F4F1} SMS"}
+          Sign in
         </button>
         <button
           type="button"
-          className={`method-toggle-btn${obAgentMethod === "email" ? " active" : ""}`}
-          onClick={() => obAgentSetMethod("email")}
+          className={`method-toggle-btn${obAgentMode === "register" ? " active" : ""}`}
+          onClick={() => obAgentSetMethod("register")}
         >
-          {"\u2709\uFE0F Email"}
+          Create account
         </button>
       </div>
-      {obAgentPhoneStep ? (
-        <div>
-          <label className="ob-agent-label">
-            {obAgentMethod === "email" ? "Email Address" : "Phone Number"}
-          </label>
-          <input
-            className="ob-agent-input"
-            type={obAgentMethod === "email" ? "email" : "tel"}
-            placeholder={obAgentMethod === "email" ? "you@email.com" : "07XX XXX XXX"}
-            value={obAgentPhone}
-            onChange={(e) => setObAgentPhone(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") obAgentSendOtp();
+      <div>
+        <label className="ob-agent-label">Email address</label>
+        <input
+          className="ob-agent-input"
+          type="email"
+          autoComplete="email"
+          placeholder="you@email.com"
+          value={obAgentEmail}
+          onChange={(e) => setObAgentEmail(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") obAgentSendOtp();
+          }}
+        />
+        <label className="ob-agent-label">Password</label>
+        <input
+          className="ob-agent-input"
+          type="password"
+          autoComplete={obAgentMode === "register" ? "new-password" : "current-password"}
+          placeholder={obAgentMode === "register" ? "At least 8 characters" : "Your password"}
+          value={obAgentPassword}
+          onChange={(e) => setObAgentPassword(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") obAgentSendOtp();
+          }}
+        />
+        {obAgentError ? (
+          <div
+            role="alert"
+            style={{
+              background: "var(--bg2, #fdf2f2)",
+              border: "1px solid var(--border)",
+              borderRadius: "10px",
+              padding: "9px 12px",
+              fontSize: "12.5px",
+              color: "#b42318",
+              margin: "10px 0",
+              lineHeight: "1.5",
             }}
-          />
-          <button className="ob-agent-btn" onClick={() => obAgentSendOtp()} disabled={obAgentSending}>
-            {obAgentSending ? "Sending\u2026" : "Send OTP \u2192"}
-          </button>
-        </div>
-      ) : (
-        <div>
-          <label className="ob-agent-label">One-Time Code</label>
-          <input
-            className="ob-agent-otp-input"
-            type="tel"
-            placeholder="_ _ _ _ _ _"
-            maxLength={6}
-            value={obAgentOtp}
-            onChange={(e) => setObAgentOtp(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") obAgentVerifyOtp();
-            }}
-          />
-          <button className="ob-agent-btn" onClick={() => obAgentVerifyOtp()} disabled={obAgentVerifying}>
-            {obAgentVerifying ? "Verifying\u2026" : "Verify & continue \u2192"}
-          </button>
-        </div>
-      )}
+          >
+            {obAgentError}
+          </div>
+        ) : null}
+        <button className="ob-agent-btn" onClick={() => obAgentSendOtp()} disabled={obAgentSending}>
+          {obAgentSending
+            ? "Please wait\u2026"
+            : obAgentMode === "register"
+              ? "Create agent account \u2192"
+              : "Sign in \u2192"}
+        </button>
+      </div>
       <div
         style={{
           textAlign: "center",

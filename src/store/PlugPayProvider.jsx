@@ -78,14 +78,6 @@ export function PlugPayProvider({ children }) {
     if (isOpen("modal-merchant")) setMerchantTab("profile");
   }, [isOpen]);
   const [following, setFollowing] = useState(false);
-  const toggleFollowMerchant = useCallback(() => {
-    setFollowing((f) => {
-      const nv = !f;
-      const biz = viewedSeller?.profile?.bizName || sellerProfile.bizName || "this seller";
-      showToast(nv ? `Following ${biz} \u2713` : `Unfollowed ${biz}`);
-      return nv;
-    });
-  }, [showToast, viewedSeller, sellerProfile.bizName]);
   const viewSellerProfile = useCallback(() => {
     setViewedSeller(null);
     openModal("modal-merchant");
@@ -670,8 +662,51 @@ export function PlugPayProvider({ children }) {
     },
     [showToast],
   );
+  // Declared after sellerProfile so the dependency can read it safely.
+  const toggleFollowMerchant = useCallback(() => {
+    setFollowing((f) => {
+      const nv = !f;
+      const biz = viewedSeller?.profile?.bizName || sellerProfile.bizName || "this seller";
+      showToast(nv ? `Following ${biz} \u2713` : `Unfollowed ${biz}`);
+      return nv;
+    });
+  }, [showToast, viewedSeller, sellerProfile.bizName]);
   finishLoginRef.current = (slug, role, email) => {
     setSessionInfo({ merchantSlug: slug || null, role: role || "trader", email: email || "" });
+    if ((role || "trader") === "trader") {
+      // Hydrate the (possibly just-created) profile right away so the shell
+      // shows the real business name instead of the placeholder.
+      fetch("/api/seller/profile")
+        .then((r) => r.json())
+        .then((p) => {
+          if (p && p.ok && p.seller) {
+            const sp = p.seller;
+            const yr = Number(sp.established_year) || 0;
+            setSellerProfile((prev) =>
+              Object.assign({}, prev, {
+                bizName: sp.business_name || prev.bizName,
+                ownerName: sp.owner_name || prev.ownerName,
+                role: sp.category || prev.role,
+                bio: sp.bio || prev.bio,
+                about: sp.about || prev.about,
+                street: sp.street || prev.street,
+                phone: sp.phone || prev.phone,
+                whatsapp: sp.whatsapp || prev.whatsapp,
+                instagram: sp.instagram || prev.instagram,
+                tiktok: sp.tiktok || prev.tiktok,
+                facebook: sp.facebook || prev.facebook,
+                paybill: sp.mpesa_paybill || prev.paybill,
+                account: sp.mpesa_account || prev.account,
+                llPhoneVerified: !!sp.ll_phone_verified,
+                established: yr
+                  ? yr + " \u00b7 " + (new Date().getFullYear() - yr) + " years in business"
+                  : prev.established,
+              }),
+            );
+          }
+        })
+        .catch(() => {});
+    }
     if ((role || "trader") === "landlord") {
       setLlAuthed(true);
       closeModal("modal-register");

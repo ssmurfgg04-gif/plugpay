@@ -227,7 +227,7 @@ export function AuthEmailStep() {
             </button>
           </span>
         ) : (
-          <span>Free forever for sellers \u00b7 Your data stays yours</span>
+          <span>Your data stays yours</span>
         )}
       </div>
     </div>

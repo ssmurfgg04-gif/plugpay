@@ -1,8 +1,8 @@
 name: Netlify Diagnostics
 
-# Queries the Netlify API (using repo secrets, token never printed) to find
-# the site-level setting behind the /.netlify/scripts/hud injection that
-# breaks React hydration on every page.
+# Queries the Netlify API (repo secrets; token never printed) to locate the
+# site-level setting behind the /.netlify/scripts/hud injection that breaks
+# React hydration (#418) on every page.
 
 on:
   workflow_dispatch:
@@ -12,38 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository == 'ssmurfgg04-gif/plugpay' }}
     steps:
-      - name: Dump site config (token never printed)
+      - uses: actions/checkout@v4
+      - name: Dump Netlify site config
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-        run: |
-          echo "=== SITE CONFIG ==="
-          curl -s -H "Authorization: Bearer $NETLIFY_AUTH_TOKEN" \
-            "https://api.netlify.com/api/v1/sites/$NETLIFY_SITE_ID" \
-            | python3 -c "
-import json,sys
-d=json.load(sys.stdin)
-def scrub(o):
-    if isinstance(o,dict):
-        return {k:('***' if any(s in k.lower() for s in ('token','secret','key','password')) else scrub(v)) for k,v in o.items()}
-    if isinstance(o,list): return [scrub(x) for x in o]
-    return o
-print(json.dumps(scrub(d), indent=1)[:12000])
-"
-          echo "=== SITE BUILD SETTINGS ==="
-          curl -s -H "Authorization: Bearer $NETLIFY_AUTH_TOKEN" \
-            "https://api.netlify.com/api/v1/sites/$NETLIFY_SITE_ID" \
-            | python3 -c "
-import json,sys
-d=json.load(sys.stdin)
-for k in sorted(d.keys()):
-    print(k, '=', json.dumps(d[k])[:200])
-" | grep -iE "hud|inject|snippet|post_process|asset|prerender|ai|feature|flag|badge|loop" || true
-          echo "=== ACCOUNT / FLAGS ==="
-          curl -s -H "Authorization: Bearer $NETLIFY_AUTH_TOKEN" \
-            "https://api.netlify.com/api/v1/sites/$NETLIFY_SITE_ID/services" | head -c 2000 || true
-          echo
-          echo "=== TRY SNIPPETS ENDPOINT ==="
-          curl -s -H "Authorization: Bearer $NETLIFY_AUTH_TOKEN" \
-            "https://api.netlify.com/api/v1/sites/$NETLIFY_SITE_ID/sniplets" | head -c 2000 || true
-          echo
+        run: python3 .github/scripts/netlify_dump.py

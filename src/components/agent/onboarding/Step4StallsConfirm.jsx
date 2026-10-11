@@ -131,7 +131,7 @@ export function Step4StallsConfirm({ active = true }) {
           }}
         >
           {floorKeys.map((k) => (
-            <option value={k}>{floorLabel(k)}</option>
+            <option key={k} value={k}>{floorLabel(k)}</option>
           ))}
         </select>
       </div>

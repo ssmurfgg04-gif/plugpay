@@ -4,28 +4,45 @@ import { usePlugPay } from "@/store/context";
 import { useSV } from "@/lib/public";
 
 export function PublicSellerProfileHeader(props) {
-  const { toggleFollowMerchant, following, showToast, copyText } = usePlugPay();
+  const { toggleFollowMerchant, following, showToast, copyText, sessionInfo } = usePlugPay();
   const sv = useSV();
   const sellerProfile = sv.profile,
     sellerStats = sv.stats,
     landlordVerifyPending = sv.pending;
+  // Real verification state only. Own profile reads the hydrated merchant row
+  // (verified: basic | verified | trusted); viewed sellers carry sv.verified.
+  var verifiedLevel = sv.own ? sellerProfile.verified : sv.verified ? "verified" : "basic";
+  var isVerified = verifiedLevel === "verified" || verifiedLevel === "trusted";
+  var badgeLabel =
+    verifiedLevel === "trusted"
+      ? "Trusted Seller Profile"
+      : isVerified
+        ? "Verified Seller Profile"
+        : "Verification pending";
+  var shareSlug =
+    (sv.own ? sessionInfo && sessionInfo.merchantSlug : sv.slug) || "";
+  var shareUrl = shareSlug ? "https://plugnply.netlify.app/sellers/" + shareSlug : "";
   return (
     <div className="tp-hero public-seller-profile-header">
       <div className="tp-hero-avatar-wrap">
         <div className="tp-hero-avatar">{(sellerProfile.bizName || "W").charAt(0).toUpperCase()}</div>
-        <div className="tp-hero-av-check">{"\u2713"}</div>
+        {isVerified ? <div className="tp-hero-av-check">{"\u2713"}</div> : null}
       </div>
       <div className="tp-hero-name">{sellerProfile.bizName}</div>
       <div className="tp-hero-role">{sellerProfile.ownerName + " \xB7 " + sellerProfile.role}</div>
       <div className="tp-hero-badge">
-        <span className="tp-v-icon">{"\u2713"}</span>
-        {" Verified Seller Profile"}
+        {isVerified ? <span className="tp-v-icon">{"\u2713"}</span> : null}
+        {" " + badgeLabel}
       </div>
       <div className="tp-hero-bio">{sellerProfile.bio}</div>
-      <div className="tp-hero-loc">
-        <span>{"\u{1F4CD} " + sellerProfile.street}</span>
-        <span>{sv.assignment.building + ", " + sv.assignment.loc}</span>
-      </div>
+      {sellerProfile.street || sv.assignment.building ? (
+        <div className="tp-hero-loc">
+          {sellerProfile.street ? <span>{"\u{1F4CD} " + sellerProfile.street}</span> : null}
+          {sv.assignment.building || sv.assignment.loc ? (
+            <span>{sv.assignment.building + (sv.assignment.loc ? ", " + sv.assignment.loc : "")}</span>
+          ) : null}
+        </div>
+      ) : null}
       <div className="tp-landlord-tag">
         <span className={`tp-landlord-tick${landlordVerifyPending ? " pending" : ""}`}>
           {landlordVerifyPending ? "\u23F3" : "\u2713"}
@@ -48,14 +65,18 @@ export function PublicSellerProfileHeader(props) {
           className="tp-hero-btn tp-hero-btn-outline tp-hero-share"
           aria-label="Share profile"
           onClick={() => {
+            if (!shareUrl) {
+              copyText(typeof window !== "undefined" ? window.location.href : "", "Profile link copied \u2713");
+              return;
+            }
             if (navigator.share) {
               navigator
                 .share({
                   title: sellerProfile.bizName,
-                  url: "https://plug.pay/m/wanjiku-electronics",
+                  url: shareUrl,
                 })
                 .catch(() => {});
-            } else copyText("plug.pay/m/wanjiku-electronics", "Profile link copied \u2713");
+            } else copyText(shareUrl, "Profile link copied \u2713");
           }}
         >
           <svg
@@ -82,7 +103,7 @@ export function PublicSellerProfileHeader(props) {
           <div className="tp-hero-stat-l">Sales</div>
         </div>
         <div className="tp-hero-stat">
-          <div className="tp-hero-stat-n">{String(sellerStats.followers || 235)}</div>
+          <div className="tp-hero-stat-n">{String(sellerStats.followers || 0)}</div>
           <div className="tp-hero-stat-l">Followers</div>
         </div>
         <div className="tp-hero-stat">

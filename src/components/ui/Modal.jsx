@@ -17,6 +17,10 @@ export function Modal({
   const open = isOpen(id);
   const stackIndex = openModals.indexOf(id);
   const zIndex = 1e3 + (stackIndex >= 0 ? stackIndex : 0);
+  function handleClose() {
+    closeModal(id);
+    if (onExit) onExit();
+  }
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => {
@@ -28,11 +32,8 @@ export function Modal({
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
-  function handleClose() {
-    closeModal(id);
-    if (onExit) onExit();
-  }
   return (
     <div
       className={`modal-overlay${open ? " on" : ""}`}

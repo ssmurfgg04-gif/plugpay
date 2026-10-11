@@ -29,7 +29,7 @@ export function CatalogueTab() {
         {FILTERS.map((f) => {
           const count = f === "All" ? PRODUCTS.length : PRODUCTS.filter((p) => p.cat === f).length;
           return (
-            <button className={`cat-filter${filter === f ? " on" : ""}`} onClick={() => setFilter(f)}>
+            <button key={f} className={`cat-filter${filter === f ? " on" : ""}`} onClick={() => setFilter(f)}>
               {f}
               {" ("}
               {count}
@@ -40,7 +40,7 @@ export function CatalogueTab() {
       </div>
       <div className="cat-grid">
         {items.map((p) => (
-          <div className="cat-item">
+          <div className="cat-item" key={p.name}>
             <div className="cat-img">
               {p.image ? (
                 <img

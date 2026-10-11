@@ -11,7 +11,7 @@ import { ProfileTabSection6 } from "@/components/public/ProfileTabSection6";
 import { ProfileTabSection7 } from "@/components/public/ProfileTabSection7";
 
 export function ProfileTab({ onViewCatalogue }) {
-  const { showToast, copyText, riders } = usePlugPay();
+  const { showToast, copyText, riders, docStatus } = usePlugPay();
   const sv = useSV();
   const sellerProfile = sv.profile;
   var __v = {
@@ -19,6 +19,7 @@ export function ProfileTab({ onViewCatalogue }) {
     showToast: showToast,
     copyText: copyText,
     riders: riders,
+    docStatus: docStatus,
     sv: sv,
     sellerProfile: sellerProfile,
   };

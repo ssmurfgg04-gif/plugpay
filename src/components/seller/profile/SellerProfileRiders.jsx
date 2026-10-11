@@ -28,28 +28,9 @@ export function SellerProfileRiders() {
         People you've personally worked with and vouch for.
       </div>
       <div className="vouch-list">
-        {[
-          ["Brian Otieno", "Boda rider", "\uD83C\uDFCD\uFE0F", "#185FA5"],
-          ["Faith Nekesa", "Errand runner", "\uD83C\uDFC3", "#BA7517"],
-        ].map(function (r) {
-          return (
-            <div key={r[0]} className="vouch-item">
-              <div
-                className="vouch-av"
-                style={{
-                  background: r[3],
-                }}
-              >
-                {r[2]}
-              </div>
-              <div className="vouch-info">
-                <div className="vouch-name">{r[0]}</div>
-                <div className="vouch-sub">{r[1] + " \u00b7 Added by you"}</div>
-              </div>
-              <span className="tp-info-label">{"\u2713 Trusted"}</span>
-            </div>
-          );
-        })}
+        {pp.riders.length === 0 ? (
+          <small className="sp-vouch-empty">No riders added yet. Add the people you actually work with below.</small>
+        ) : null}
         {pp.riders.map(function (r, i) {
           return (
             <div key={"n" + i} className="vouch-item">

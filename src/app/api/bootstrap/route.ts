@@ -80,7 +80,7 @@ export async function GET() {
     // ---- Public directory (same for everyone) -------------------------------
     const [bRes, mRes] = await Promise.all([
       db.from('buildings').select('id, slug, name, address, area, floors, total_stalls, registered_merchants, coverage_pct'),
-      db.from('merchants').select('id, slug, business_name, owner_name, category, building_name, stall_label, verified, trust_score, sales_count, rating_avg, rating_count, vouches_received, avatar_url'),
+      db.from('merchants').select('id, slug, business_name, owner_name, category, building_name, stall_label, verified, trust_score, sales_count, rating_avg, rating_count, vouches_received, avatar_url, bio, about, street, phone, whatsapp, instagram, tiktok, facebook, established_year'),
     ]);
 
     const buildingsRows = bRes.data ?? [];
@@ -231,6 +231,9 @@ export async function GET() {
     }
 
     // ---- Directory views ------------------------------------------------------
+    // Carries everything the client-side profile modal needs so it can render
+    // REAL merchant data without extra round-trips (full profile is still
+    // available per-seller from /api/public/seller/[slug]).
     const directorySellers = merchantsRows.map((m: Record<string, unknown>, i: number) => ({
       type: 'merchant',
       name: String(m.business_name ?? ''),
@@ -253,6 +256,22 @@ export async function GET() {
       sales: Number(m.sales_count ?? 0),
       reviews: Number(m.rating_count ?? 0),
       vouches: Number(m.vouches_received ?? 0),
+      slug: String(m.slug ?? ''),
+      verified: ['verified', 'trusted'].includes(String(m.verified ?? '')),
+      level: String(m.verified ?? 'basic'),
+      trust: Number(m.trust_score ?? 0),
+      cat: String(m.category ?? 'General'),
+      building: String(m.building_name ?? ''),
+      loc: [String(m.building_name ?? ''), String(m.stall_label ?? '')].filter(Boolean).join(', '),
+      street: String(m.street ?? ''),
+      phone: String(m.whatsapp || m.phone || ''),
+      bio: String(m.bio ?? ''),
+      about: String(m.about ?? ''),
+      owner: String(m.owner_name ?? ''),
+      years: Number(m.established_year ?? 0),
+      instagram: String(m.instagram ?? ''),
+      tiktok: String(m.tiktok ?? ''),
+      facebook: String(m.facebook ?? ''),
     }));
 
     const directoryBuildings = buildingsRows.map((b: Record<string, unknown>) => ({

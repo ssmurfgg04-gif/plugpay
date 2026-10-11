@@ -23,6 +23,8 @@ export var PPBoundary = (function () {
     } catch (_) {}
   };
   B.prototype.render = function () {
+    // Legacy prototype-style component kept as-is (works, tested).
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     var self = this;
     if (this.state.err)
       return (

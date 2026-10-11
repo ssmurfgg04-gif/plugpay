@@ -103,6 +103,7 @@ export function Step1Building({ active = true }) {
             var _a;
             return (
               <div
+                key={k}
                 style={{
                   display: "flex",
                   alignItems: "center",

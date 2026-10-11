@@ -31,7 +31,7 @@ export function OnboardFlow() {
         <div className="ob-sub">{meta.sub}</div>
         <div className="ob-steps-bar">
           {[1, 2].map((p) => (
-            <div className={`ob-step-pip${p <= meta.pip ? " active" : ""}`} />
+            <div key={p} className={`ob-step-pip${p <= meta.pip ? " active" : ""}`} />
           ))}
         </div>
       </div>

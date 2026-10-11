@@ -65,6 +65,18 @@ export function PlugPayProvider({ children }) {
   );
   const [merchantTab, setMerchantTab] = useState("profile");
   const [viewedSeller, setViewedSeller] = useState(null);
+  // Merchant directory. Starts on the bundled seed (no-DB fallback documented
+  // in the README) and is replaced by the real database directory as soon as
+  // /api/bootstrap returns it. All lookups below read this list.
+  const [directory, setDirectory] = useState(merchants);
+  useEffect(() => {
+    fetch("/api/bootstrap")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d && d.ok && Array.isArray(d.directorySellers)) setDirectory(d.directorySellers);
+      })
+      .catch(() => {});
+  }, []);
   const openMerchantModal = useCallback(() => {
     setViewedSeller(null);
     openModal("modal-merchant");
@@ -105,12 +117,12 @@ export function PlugPayProvider({ children }) {
     return a ? a.street : "Nairobi CBD";
   };
   const showSeller = (d) => {
-    setViewedSeller(
-      buildViewedSeller({
-        street: streetOf(d.building),
-        ...d,
-      }),
-    );
+    var vs = buildViewedSeller({
+      street: streetOf(d.building),
+      ...d,
+    });
+    setViewedSeller(vs);
+    hydrateViewedSeller(setViewedSeller, vs.slug);
     setMerchantTab("profile");
     openModal("modal-merchant");
     window.setTimeout(() => {
@@ -158,7 +170,7 @@ export function PlugPayProvider({ children }) {
       return;
     }
     const owner = t ? t.name : p.owner;
-    const dir = merchants.filter((m) => m.name === owner && m.sub.indexOf(p.building) > -1)[0];
+    const dir = directory.filter((m) => m.name === owner && m.sub.indexOf(p.building) > -1)[0];
     const claimed = p.registered && agentClaims.some((c) => c.verified && sameNumber(c.phone, p.phone));
     const verified = t ? !!tv : dir ? dir.badgeClass === "rcb-verified" : p.registered ? claimed : p.verified;
     const catSrc = dir
@@ -193,7 +205,7 @@ export function PlugPayProvider({ children }) {
       openOwnProfile();
       return;
     }
-    const dir = merchants.filter((x) => x.name === ref.name)[0];
+    const dir = directory.filter((x) => x.name === ref.name)[0];
     if (dir) {
       openDirectorySeller(dir);
       return;
@@ -215,7 +227,7 @@ export function PlugPayProvider({ children }) {
   };
   const openDirectorySeller = (m) => {
     const name = m.name || m.owner;
-    const dir = merchants.filter((x) => x.name === name)[0];
+    const dir = directory.filter((x) => x.name === name)[0];
     if (!dir) {
       openOwnProfile();
       return;
@@ -231,11 +243,17 @@ export function PlugPayProvider({ children }) {
       cat: parts[0],
       building: parts[1],
       loc: parts[2],
-      verified: dir.badgeClass === "rcb-verified",
+      verified: dir.badgeClass === "rcb-verified" || dir.badgeClass === "rcb-trusted",
       rating: dir.rating,
       sales: dir.sales,
       reviews: dir.reviews,
       vouches: dir.vouches,
+      trust: dir.trust,
+      bio: dir.bio,
+      about: dir.about,
+      phone: dir.phone,
+      years: dir.years,
+      slug: dir.slug,
     });
   };
   const loadSellerPage = (id) => {
@@ -245,24 +263,30 @@ export function PlugPayProvider({ children }) {
       setMerchantTab("profile");
       return true;
     }
-    const dir = merchants.filter((x) => ppSlug(x.name) === k)[0];
+    const dir = directory.filter((x) => ppSlug(x.name) === k || ppSlug(x.slug || "") === k)[0];
     if (!dir) return false;
     const parts = dir.sub.split(" \u00b7 ");
-    setViewedSeller(
-      buildViewedSeller({
-        street: streetOf(parts[1]),
-        biz: dir.name,
-        owner: dir.name,
-        cat: parts[0],
-        building: parts[1],
-        loc: parts[2],
-        verified: dir.badgeClass === "rcb-verified",
-        rating: dir.rating,
-        sales: dir.sales,
-        reviews: dir.reviews,
-        vouches: dir.vouches,
-      }),
-    );
+    var vs = buildViewedSeller({
+      street: streetOf(parts[1]),
+      biz: dir.name,
+      owner: dir.name,
+      cat: parts[0],
+      building: parts[1],
+      loc: parts[2],
+      verified: dir.badgeClass === "rcb-verified" || dir.badgeClass === "rcb-trusted",
+      rating: dir.rating,
+      sales: dir.sales,
+      reviews: dir.reviews,
+      vouches: dir.vouches,
+      trust: dir.trust,
+      bio: dir.bio,
+      about: dir.about,
+      phone: dir.phone,
+      years: dir.years,
+      slug: dir.slug,
+    });
+    setViewedSeller(vs);
+    hydrateViewedSeller(setViewedSeller, vs.slug);
     setMerchantTab("profile");
     return true;
   };
@@ -274,7 +298,7 @@ export function PlugPayProvider({ children }) {
   const [filter, setFilterState] = useState("all");
   const [resultsTitle, setResultsTitle] = useState("Search results");
   const [resultsMeta, setResultsMeta] = useState("Showing top matches");
-  const pool = useMemo(() => [...merchants, ...buildings], []);
+  const pool = useMemo(() => [...directory, ...buildings], [directory, buildings]);
   const doSearch = useCallback(
     (q) => {
       var _a;
@@ -458,9 +482,18 @@ export function PlugPayProvider({ children }) {
   const [vacateBuilding, setVacateBuilding] = useState("");
   const [vacateStall, setVacateStall] = useState("");
   const [stallAssignment, setStallAssignment] = usePersisted("stall2", {
-    building: "Anniversary Towers",
-    loc: "Floor 3, Stall 305",
+    building: "",
+    loc: "",
   });
+  // Migration: the prototype seeded a fake "Anniversary Towers" stall for
+  // everyone. Normalize the legacy default at read time; the next real
+  // assignment write replaces the stored value.
+  const stallAssignmentClean =
+    stallAssignment &&
+    stallAssignment.building === "Anniversary Towers" &&
+    stallAssignment.loc === "Floor 3, Stall 305"
+      ? { building: "", loc: "" }
+      : stallAssignment;
   const stockRef = useRef([]);
   const invoicesListRef = useRef([]);
   const rsIdRef = useRef(1);
@@ -602,6 +635,7 @@ export function PlugPayProvider({ children }) {
     account: "",
     about: "",
     llPhoneVerified: false,
+    verified: "basic",
   });
   const updateSellerProfile = useCallback(
     (patch) => {
@@ -698,6 +732,7 @@ export function PlugPayProvider({ children }) {
                 paybill: sp.mpesa_paybill || prev.paybill,
                 account: sp.mpesa_account || prev.account,
                 llPhoneVerified: !!sp.ll_phone_verified,
+                verified: sp.verified || prev.verified || "basic",
                 established: yr
                   ? yr + " \u00b7 " + (new Date().getFullYear() - yr) + " years in business"
                   : prev.established,
@@ -1095,7 +1130,7 @@ export function PlugPayProvider({ children }) {
   const [obFloorsCount, setObFloorsCount] = useState("6");
   const [obFloorStalls, setObFloorStallsState] = useState({});
   const [obPayMethod, setObPayMethod] = useState("till");
-  const [obMerchantList, setObMerchantList] = useState(seedObMerchants);
+  const [obMerchantList, setObMerchantList] = useState([]);
   const obMerchantIdRef = useRef(1);
   const [obEditingMerchantId, setObEditingMerchantId] = useState(null);
   const [obNewName, setObNewName] = useState("");
@@ -1119,7 +1154,7 @@ export function PlugPayProvider({ children }) {
     setObAgentPassword("");
     setObAgentError("");
     setObAgentMode("signin");
-    setObMerchantList(seedObMerchants);
+    setObMerchantList([]);
     setObEditingMerchantId(null);
     setObStep_(1);
   }, [openModal]);
@@ -1641,6 +1676,7 @@ export function PlugPayProvider({ children }) {
                     paybill: sp.mpesa_paybill || "",
                     account: sp.mpesa_account || "",
                     llPhoneVerified: !!sp.ll_phone_verified,
+                    verified: sp.verified || "basic",
                     established: yr
                       ? yr + " \u00b7 " + (new Date().getFullYear() - yr) + " years in business"
                       : "",
@@ -1851,6 +1887,7 @@ export function PlugPayProvider({ children }) {
     showToast,
     copyText,
     viewedSeller,
+    directory,
     loadSellerPage,
     openDirectorySeller,
     openSellerRef,
@@ -1930,7 +1967,7 @@ export function PlugPayProvider({ children }) {
     vacateStall,
     setVacateStall,
     confirmVacate,
-    stallAssignment,
+    stallAssignment: stallAssignmentClean,
     rsName,
     setRsName,
     rsPhone,
@@ -2026,96 +2063,36 @@ export function PlugPayProvider({ children }) {
 }
 
 
-var STALL_POOL = [
-  ["Njeri Fashions", "Fashion"],
-  ["Kamau Electronics", "Electronics"],
-  ["Otieno Hardware", "Hardware"],
-  ["Wambui Beauty Hub", "Beauty"],
-  ["Mama Ann Foods", "Food"],
-  ["Salim Mobile Accessories", "Electronics"],
-  ["Achieng Textiles", "Fashion"],
-  ["Mwangi Tools & Fittings", "Hardware"],
-  ["Zawadi Cosmetics", "Beauty"],
-  ["Kip Sneakers", "Fashion"],
-];
-
-var STALL_PRODUCTS = {
-  Fashion: [
-    ["Ankara dress", 1800],
-    ["Men's shirt", 1200],
-    ["Kitenge skirt", 950],
-  ],
-  Electronics: [
-    ["Phone charger", 450],
-    ["Bluetooth earbuds", 1500],
-    ["Power bank 10,000mAh", 1900],
-  ],
-  Hardware: [
-    ["Claw hammer", 650],
-    ["Padlock", 400],
-    ["Paint 4L", 2200],
-  ],
-  Beauty: [
-    ["Shea butter 250ml", 600],
-    ["Hair oil", 450],
-    ["Body lotion 400ml", 550],
-  ],
-  Food: [
-    ["Chapati (10)", 250],
-    ["Mandazi pack", 100],
-    ["Samosas (6)", 180],
-  ],
-  Other: [
-    ["Everyday essentials", 500],
-    ["Bestseller", 800],
-    ["Gift set", 1200],
-  ],
-};
-
-function hashStr(s) {
-  var x = 7;
-  for (var i = 0; i < s.length; i++) x = (x * 31 + s.charCodeAt(i)) % 100003;
-  return x;
-}
-
 function buildStallProfile(pp, sp) {
-  var st = sp.stall,
-    hsh = hashStr(sp.floor + ":" + st.id);
+  // Honest stall profile: registered merchants (from the agent onboarding list
+  // or the DB directory) provide the real data. Unregistered template stalls
+  // keep only their floor-plan label — no fabricated owners, ratings or stock.
+  var st = sp.stall;
   var reg =
     sp.merchant ||
     (pp.obMerchantList || []).filter(function (m) {
       return m.floor === sp.floor && String(parseInt(m.stallNum, 10)) === String(parseInt(st.id, 10));
     })[0];
   var named = st.n && st.n.indexOf("Stall ") !== 0 ? st.n : "";
-  var pool = STALL_POOL[hsh % STALL_POOL.length];
-  var biz = reg ? reg.biz : named || pool[0];
-  var cat = reg ? reg.type : named ? "Retail" : pool[1];
+  var biz = reg ? reg.biz : named;
+  var cat = reg ? reg.type : named ? "Retail" : "";
   var ex = (reg && reg.extra) || {};
   return {
     biz: biz,
-    owner: reg ? reg.ownerName : named ? named : biz.split(" ")[0] + " (owner)",
+    owner: reg ? reg.ownerName : named,
     cat: cat,
     loc: (sp.floor === "G" ? "Ground floor" : "Floor " + sp.floor) + ", Stall " + st.id,
-    building: sp.building || "Anniversary Towers",
+    building: sp.building || "",
     verified: st.s === "v" || (reg && reg.status === "done"),
-    rating: (4.2 + (hsh % 8) / 10).toFixed(1),
-    reviews: 8 + (hsh % 60),
-    years: ex.years || 1 + (hsh % 9),
+    rating: reg ? String(ex.rating || "") : "",
+    reviews: reg ? Number(ex.reviews || 0) : 0,
+    years: ex.years || 0,
     phone: reg ? reg.phone : "",
     photos: ex.photos || [],
-    products: STALL_PRODUCTS[cat] || STALL_PRODUCTS.Other,
+    products: reg ? ex.products || [] : [],
     registered: !!reg,
   };
 }
-
-var CAT_ICON = {
-  Fashion: "\uD83D\uDC57",
-  Electronics: "\uD83D\uDCF1",
-  Hardware: "\uD83D\uDD27",
-  Beauty: "\uD83D\uDC84",
-  Food: "\uD83C\uDF72",
-  Other: "\uD83D\uDCE6",
-};
 
 function slugOf(s) {
   return String(s || "")
@@ -2124,32 +2101,35 @@ function slugOf(s) {
 }
 
 function buildViewedSeller(d) {
-  var hs = hashStr((d.building || "") + "|" + (d.loc || "") + "|" + (d.owner || d.biz));
+  // Honest view of another seller: only real values pass through. Anything the
+  // directory doesn't know stays at zero / empty — no fabricated stats, bios,
+  // socials or stock. The async hydrateSeller() call upgrades this view with
+  // live catalogue + reviews from /api/public/seller/[slug].
   var cat = d.cat || "Retail";
-  var avg = Number(d.rating) || 4.2 + (hs % 8) / 10;
-  var reviewCount = Number(d.reviews) || 8 + (hs % 60);
-  var sales = Number(d.sales) || 20 + (hs % 400);
-  var vouches = Number(d.vouches) || 3 + (hs % 25);
-  var trust = Math.min(
-    99,
-    Math.round(53 + (avg / 5) * 25 + Math.min(15, sales / 20) + Math.min(12, vouches / 4)),
-  );
-  var n5 = Math.round(reviewCount * 0.74),
-    n4 = Math.round(reviewCount * 0.15),
-    n3 = Math.round(reviewCount * 0.06),
-    n2 = Math.round(reviewCount * 0.03);
-  var dist = {
-    5: n5,
-    4: n4,
-    3: n3,
-    2: n2,
-    1: Math.max(0, reviewCount - n5 - n4 - n3 - n2),
+  var avg = Number(d.rating) || 0;
+  var reviewCount = Number(d.reviews) || 0;
+  var sales = Number(d.sales) || 0;
+  var vouches = Number(d.vouches) || 0;
+  var trust = Number(d.trust) || 0;
+  var n5 = 0, n4 = 0, n3 = 0, n2 = 0, n1 = 0;
+  if (reviewCount > 0 && avg > 0) {
+    // Approximate distribution from the real average for the histogram.
+    n5 = Math.round(reviewCount * (avg / 5) * 0.8);
+    n4 = Math.round(reviewCount * 0.12);
+    n3 = Math.round(reviewCount * 0.05);
+    n2 = Math.round(reviewCount * 0.02);
+    n1 = Math.max(0, reviewCount - n5 - n4 - n3 - n2);
+  }
+  var dist = { 5: n5, 4: n4, 3: n3, 2: n2, 1: n1 };
+  var years = Number(d.years) || 0;
+  var slug = d.slug || slugOf(d.biz);
+  var social = function (v) {
+    var s = String(v || "").trim();
+    return s && s !== "null" && s.indexOf("@") !== 0 && s.indexOf("http") !== 0 ? "" : s;
   };
-  var years = Number(d.years) || 1 + (hs % 9);
-  var slug = slugOf(d.biz);
-  var stockBase = STALL_PRODUCTS[cat] || STALL_PRODUCTS.Other;
   return {
     key: (d.building || "") + "|" + (d.loc || ""),
+    slug: slug,
     verified: !!d.verified,
     registered: !!d.registered,
     assignment: {
@@ -2163,53 +2143,85 @@ function buildViewedSeller(d) {
       vouches: vouches,
       trust: trust,
       dist: dist,
-      followers: 40 + (hs % 300),
+      followers: 0,
     },
     profile: {
       bizName: d.biz,
       ownerName: d.owner || d.biz,
       role: cat === "Retail" ? "Retail Trader" : cat + " Retailer",
-      bio:
-        cat +
-        " seller at " +
-        d.building +
-        ". In business for " +
-        years +
-        " year" +
-        (years > 1 ? "s" : "") +
-        ".",
-      street: d.street || "Nairobi CBD",
-      phone: d.phone || "Not shared",
-      whatsapp: d.phone || "Not shared",
-      established: 2026 - years + " \u00b7 " + years + " year" + (years > 1 ? "s" : "") + " in business",
-      instagram: "@" + slug,
-      tiktok: "@" + slug,
-      facebook: "/" + d.biz.replace(/\s+/g, ""),
+      bio: String(d.bio || ""),
+      street: String(d.street || ""),
+      phone: String(d.phone || ""),
+      whatsapp: String(d.phone || ""),
+      established: years
+        ? years + " \u00b7 " + (new Date().getFullYear() - years) + " year" + (new Date().getFullYear() - years > 1 ? "s" : "") + " in business"
+        : "",
+      instagram: social(d.instagram),
+      tiktok: social(d.tiktok),
+      facebook: social(d.facebook),
       paybill: "",
       account: "",
-      about:
-        d.biz +
-        " sells " +
-        cat.toLowerCase() +
-        " products from " +
-        d.loc +
-        ", " +
-        d.building +
-        ". Message the seller on WhatsApp to place an order.",
+      about: String(d.about || ""),
       llPhoneVerified: !!d.verified,
     },
-    catalogue: stockBase.map(function (p, i) {
-      return {
-        id: "v" + i,
-        icon: CAT_ICON[cat] || CAT_ICON.Other,
-        image: "",
-        name: p[0],
-        price: p[1],
-        stock: 4 + ((hs + i * 7) % 20),
-        category: cat,
-      };
-    }),
+    catalogue: Array.isArray(d.catalogueList)
+      ? d.catalogueList
+      : [],
+    reviews: Array.isArray(d.reviewList) ? d.reviewList : [],
   };
+}
+
+// Fetch the REAL profile, catalogue and reviews for a merchant slug and swap
+// them into the currently viewed seller. Falls back silently — the caller
+// already rendered the best-known honest view.
+function hydrateViewedSeller(setViewedSeller, slug) {
+  if (!slug) return;
+  fetch("/api/public/seller/" + encodeURIComponent(slug))
+    .then(function (r) {
+      return r.ok ? r.json() : null;
+    })
+    .then(function (d) {
+      if (!d || !d.ok || !d.seller) return;
+      setViewedSeller(function (cur) {
+        // Only apply if the user is still looking at this seller.
+        if (cur && cur.slug && cur.slug !== slug) return cur;
+        return buildViewedSeller({
+          biz: d.seller.business_name,
+          owner: d.seller.owner_name,
+          cat: d.seller.category,
+          building: d.seller.building_name || "",
+          loc: [d.seller.building_name, d.seller.stall_label].filter(Boolean).join(", "),
+          street: d.seller.street,
+          phone: d.seller.whatsapp || d.seller.phone,
+          rating: d.seller.rating_avg,
+          sales: d.seller.sales_count,
+          reviews: d.seller.rating_count,
+          vouches: d.seller.vouches_received,
+          trust: d.seller.trust_score,
+          verified: ["verified", "trusted"].includes(String(d.seller.verified)),
+          years: d.seller.established_year || 0,
+          bio: d.seller.bio,
+          about: d.seller.about,
+          instagram: d.seller.instagram,
+          tiktok: d.seller.tiktok,
+          facebook: d.seller.facebook,
+          slug: slug,
+          reviewList: d.reviews,
+          catalogueList: (d.catalogue || []).map(function (p, i) {
+            return {
+              id: p.id || "p" + i,
+              icon: "\uD83D\uDCE6",
+              image: p.image || "",
+              name: p.name,
+              price: p.price,
+              stock: p.stock,
+              category: p.category || cat,
+            };
+          }),
+        });
+      });
+    })
+    .catch(function () {});
 }
 
 var emptyRiderRow = (id) => ({
@@ -2270,45 +2282,6 @@ function waInvoiceText(inv, seller) {
 
 /* ---- Stages (buildings, floors and stalls, merchants, review) ---- */
 /* ---- Stages (buildings, floors and stalls, merchants, review) ---- */
-var seedObMerchants = [
-  {
-    id: "seed-jane",
-    biz: "Jane Mwangi",
-    ownerName: "Jane Mwangi",
-    phone: "0712 345 678",
-    floor: "3",
-    stallNum: "14",
-    type: "Fashion",
-    initials: "JM",
-    color: "#51104a",
-    status: "done",
-  },
-  {
-    id: "seed-peter",
-    biz: "Peter Otieno",
-    ownerName: "Peter Otieno",
-    phone: "0723 456 789",
-    floor: "3",
-    stallNum: "12",
-    type: "Electronics",
-    initials: "PO",
-    color: "#185FA5",
-    status: "done",
-  },
-  {
-    id: "seed-david",
-    biz: "David Mutua",
-    ownerName: "David Mutua",
-    phone: "0734 567 890",
-    floor: "2",
-    stallNum: "5",
-    type: "Hardware",
-    initials: "DM",
-    color: "#6B3DB8",
-    status: "pending",
-  },
-];
-
 function waClaimText(c) {
   return (
     "Hi " +

@@ -1,25 +1,18 @@
 "use client";
 
-import { merchants } from "@/lib/public";
 import { usePlugPay } from "@/store/context";
 import { buildings, ppResolveBuilding } from "@/lib/building";
 import { BuildingView } from "@/components/building/BuildingView";
 
 function resolvePublicStallSeller(stall) {
-  if (stall && stall.n && String(stall.n).trim()) return null;
-  return {
-    biz: "Wanjiku Electronics",
-    ownerName: "Jane Wanjiku",
-    type: "Electronics",
-    phone: "",
-    status: "done",
-  };
+  // Vacant/unnamed stalls stay vacant — no fabricated occupants.
+  return null;
 }
 
-function ppBuildingMerchants(name) {
-  return merchants
+function ppBuildingMerchants(directory, name) {
+  return (directory || [])
     .filter(function (m) {
-      return String(m.sub).indexOf(name) > -1;
+      return String(m.sub || "").indexOf(name) > -1;
     })
     .map(function (m) {
       var parts = String(m.sub).split(" \u00B7 ");
@@ -40,61 +33,29 @@ function ppBuildingMerchants(name) {
 
 var namedFloors = {
   G: [
-    {
-      id: "G01",
-      n: "M-Pesa",
-      s: "t",
-    },
-    {
-      id: "G02",
-      n: "Newsstand",
-      s: "b",
-    },
-    {
-      id: "G03",
-      n: "Chemist",
-      s: "v",
-    },
+    { id: "G01", n: "", s: "e" },
+    { id: "G02", n: "", s: "e" },
+    { id: "G03", n: "", s: "e" },
     {
       id: "G04",
       n: "",
       s: "e",
     },
-    {
-      id: "G05",
-      n: "Shoe Repair",
-      s: "b",
-    },
-    {
-      id: "G06",
-      n: "Snack Bar",
-      s: "v",
-    },
+    { id: "G05", n: "", s: "e" },
+    { id: "G06", n: "", s: "e" },
     {
       id: "G07",
       n: "",
       s: "e",
     },
-    {
-      id: "G08",
-      n: "Accessories",
-      s: "v",
-    },
-    {
-      id: "G09",
-      n: "Airtime",
-      s: "b",
-    },
+    { id: "G08", n: "", s: "e" },
+    { id: "G09", n: "", s: "e" },
     {
       id: "G10",
       n: "",
       s: "e",
     },
-    {
-      id: "G11",
-      n: "Bureau",
-      s: "v",
-    },
+    { id: "G11", n: "", s: "e" },
     {
       id: "G12",
       n: "",
@@ -102,123 +63,59 @@ var namedFloors = {
     },
   ],
   1: [
-    {
-      id: "101",
-      n: "Wanjiku Fab",
-      s: "t",
-    },
-    {
-      id: "102",
-      n: "Peter Phones",
-      s: "v",
-    },
+    { id: "101", n: "", s: "e" },
+    { id: "102", n: "", s: "e" },
     {
       id: "103",
       n: "",
       s: "e",
     },
-    {
-      id: "104",
-      n: "Ali Hardware",
-      s: "b",
-    },
-    {
-      id: "105",
-      n: "Grace Beauty",
-      s: "v",
-    },
+    { id: "104", n: "", s: "e" },
+    { id: "105", n: "", s: "e" },
     {
       id: "106",
       n: "",
       s: "e",
     },
-    {
-      id: "107",
-      n: "Tom Stat.",
-      s: "b",
-    },
-    {
-      id: "108",
-      n: "Ropa Fashion",
-      s: "v",
-    },
+    { id: "107", n: "", s: "e" },
+    { id: "108", n: "", s: "e" },
     {
       id: "109",
       n: "",
       s: "e",
     },
-    {
-      id: "110",
-      n: "Ken Bags",
-      s: "b",
-    },
+    { id: "110", n: "", s: "e" },
     {
       id: "111",
       n: "",
       s: "e",
     },
-    {
-      id: "112",
-      n: "E. Bureau",
-      s: "v",
-    },
+    { id: "112", n: "", s: "e" },
   ],
   2: [
-    {
-      id: "201",
-      n: "Amina Spices",
-      s: "b",
-    },
-    {
-      id: "202",
-      n: "David Mutua",
-      s: "t",
-    },
-    {
-      id: "203",
-      n: "Nafisa Bags",
-      s: "v",
-    },
+    { id: "201", n: "", s: "e" },
+    { id: "202", n: "", s: "e" },
+    { id: "203", n: "", s: "e" },
     {
       id: "204",
       n: "",
       s: "e",
     },
-    {
-      id: "205",
-      n: "Joyce Tailor",
-      s: "b",
-    },
-    {
-      id: "206",
-      n: "Ben Watches",
-      s: "v",
-    },
+    { id: "205", n: "", s: "e" },
+    { id: "206", n: "", s: "e" },
     {
       id: "207",
       n: "",
       s: "e",
     },
-    {
-      id: "208",
-      n: "Ken Bureau",
-      s: "b",
-    },
-    {
-      id: "209",
-      n: "M. Printing",
-      s: "v",
-    },
+    { id: "208", n: "", s: "e" },
+    { id: "209", n: "", s: "e" },
     {
       id: "210",
       n: "",
       s: "e",
     },
-    {
-      id: "211",
-      n: "Kariuki Shoe",
-      s: "b",
-    },
+    { id: "211", n: "", s: "e" },
     {
       id: "212",
       n: "",
@@ -226,61 +123,25 @@ var namedFloors = {
     },
   ],
   3: [
-    {
-      id: "301",
-      n: "Jane Mwangi",
-      s: "v",
-    },
-    {
-      id: "302",
-      n: "Peter Otieno",
-      s: "v",
-    },
-    {
-      id: "303",
-      n: "Amina Kibe",
-      s: "b",
-    },
-    {
-      id: "304",
-      n: "Sarah W.",
-      s: "b",
-    },
-    {
-      id: "305",
-      n: "Wanjiku Electronics",
-      s: "v",
-    },
-    {
-      id: "306",
-      n: "M. Ali",
-      s: "v",
-    },
-    {
-      id: "307",
-      n: "Rosa Import",
-      s: "t",
-    },
+    { id: "301", n: "", s: "e" },
+    { id: "302", n: "", s: "e" },
+    { id: "303", n: "", s: "e" },
+    { id: "304", n: "", s: "e" },
+    { id: "305", n: "", s: "e" },
+    { id: "306", n: "", s: "e" },
+    { id: "307", n: "", s: "e" },
     {
       id: "308",
       n: "",
       s: "e",
     },
-    {
-      id: "309",
-      n: "Ben Tailor",
-      s: "b",
-    },
+    { id: "309", n: "", s: "e" },
     {
       id: "310",
       n: "",
       s: "e",
     },
-    {
-      id: "311",
-      n: "Eva Cosm.",
-      s: "v",
-    },
+    { id: "311", n: "", s: "e" },
     {
       id: "312",
       n: "",
@@ -288,56 +149,32 @@ var namedFloors = {
     },
   ],
   4: [
-    {
-      id: "401",
-      n: "Rosa Import",
-      s: "v",
-    },
+    { id: "401", n: "", s: "e" },
     {
       id: "402",
       n: "",
       s: "e",
     },
-    {
-      id: "403",
-      n: "Ken Courier",
-      s: "b",
-    },
-    {
-      id: "404",
-      n: "Liz Cosm.",
-      s: "v",
-    },
+    { id: "403", n: "", s: "e" },
+    { id: "404", n: "", s: "e" },
     {
       id: "405",
       n: "",
       s: "e",
     },
-    {
-      id: "406",
-      n: "Victor Pr.",
-      s: "b",
-    },
+    { id: "406", n: "", s: "e" },
     {
       id: "407",
       n: "",
       s: "e",
     },
-    {
-      id: "408",
-      n: "Big Whole.",
-      s: "t",
-    },
+    { id: "408", n: "", s: "e" },
     {
       id: "409",
       n: "",
       s: "e",
     },
-    {
-      id: "410",
-      n: "Ravi Text.",
-      s: "b",
-    },
+    { id: "410", n: "", s: "e" },
     {
       id: "411",
       n: "",
@@ -474,7 +311,7 @@ export function BuildingViewContainer(p) {
           : undefined
       }
       subtitle={ll ? "Select a stall to admit, verify, view or vacate a seller." : undefined}
-      merchants={ppBuildingMerchants(b.name)}
+      merchants={ppBuildingMerchants(pp.directory, b.name)}
       onMerchantSelect={p.onMerchantSelect || pp.openDirectorySeller}
     />
   );

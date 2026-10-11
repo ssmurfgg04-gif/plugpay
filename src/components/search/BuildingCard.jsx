@@ -25,7 +25,7 @@ export function BuildingCard({ r }) {
       </div>
       <div className="floor-mini">
         {MINI_STALLS.map((s, i) => (
-          <div className={`fm-stall ${s === "e" ? "fms-vac" : "fms-occ"}`} />
+          <div key={i} className={`fm-stall ${s === "e" ? "fms-vac" : "fms-occ"}`} />
         ))}
       </div>
       <div className="rc-stats">

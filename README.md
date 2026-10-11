@@ -11,31 +11,30 @@ WhatsApp chat into a storefront buyers can actually trust.
   stats from the database, WhatsApp sale demo, friction/breakthrough/contrast
   sections, free-forever pricing, community voices, market focus, FAQ and the
   deep-plum merchant CTA.
-- **Explore map** at `/map`: Nextdoor-style live map of every verified building in
-  Nairobi CBD. Photo pins carry a trader-count pill, hover cards show name plus
-  "N verified traders · area", a floating trade filter sits over the map, results
-  live in a split sidebar (404px) on desktop and a sheet under a 40vh map strip on
-  mobile. Includes a "Near me" geolocation sort with haversine distances, two-stage
-  tap on touch, pin↔card cross-highlighting, Google Maps directions and WhatsApp
-  share on every card. Leaflet + Esri light-gray canvas tiles, repainted via a
-  layer group without map rebuilds, `fitBounds` after filtering.
-- **Merchant trust profiles** at `/m/[slug]`: verified badges with dates, trust
-  score, stats row, catalogue with WhatsApp checkout deep links, receipt-anchored
-  reviews (verified buyers carry their receipt number), building tab with peer
-  vouching.
-- **Building floor maps** at `/buildings` and `/buildings/[slug]`: color-coded stall
-  grids per floor (trusted / verified / registered / vacant), tap-a-stall to open the
-  trader, directory search by name or street, 3-column desktop grid.
+- **Explore & search** at `/search`: tabbed merchant/building directory backed by
+  `GET /api/search?q=` (server-side Postgres search). Merchant cards deep-link into
+  trust profiles; building cards open the floor view.
+- **Merchant trust profiles** at `/sellers/[slug]` and `/m/[slug]`: verified badges,
+  trust score, stats row, catalogue with WhatsApp checkout deep links,
+  receipt-anchored reviews (verified buyers carry their receipt number),
+  building tab with peer vouching.
+- **Building pages** at `/buildings/[id]`: color-coded stall grids per floor
+  (trusted / verified / registered / vacant), tap-a-stall to open the trader,
+  directory search by name or street.
 - **Email + password auth** for every portal (seller / landlord / agent) at
-  `/seller/*`, `/landlord/*`, `/agent/*`: register once, sign in with the same
-  email and password. No SMS/WhatsApp OTP, no one-time codes on screen.
+  `/seller/*`, `/landlord/*`, `/agent/*` (bare `/seller` and `/landlord` redirect
+  to the dashboard): register once, sign in with the same email and password.
+  No SMS/WhatsApp OTP, no one-time codes on screen.
   Passwords are scrypt-hashed with per-user salts (`app_users` table); sessions
   are HMAC-signed httpOnly cookies (`src/lib/session.ts`). A new account is a
   CLEAN account — empty catalogue, zero sales, no demo records attached.
-- **Trader dashboard** at `/dashboard`: record a sale with M-Pesa confirmation code,
-  itemised totals, delivery choice, receipt confirmation state, PIN management.
-- **Landlord tools** at `/landlord`: occupancy, coverage and monthly verification
-  ladder per building.
+- **Trader dashboard** at `/seller/dashboard`: record a sale with M-Pesa
+  confirmation code, itemised totals, delivery choice, receipt confirmation
+  state, PIN management, catalogue and invoice tabs.
+- **Landlord tools** at `/landlord/dashboard`: occupancy, coverage and monthly
+  verification ladder per building; stalls, sellers and documents tabs.
+- **Agent tools** at `/agent`: onboarding flow for new buildings, claims queue
+  and building registry.
 
 ## Stack
 
@@ -62,22 +61,40 @@ supabase db push
 ```
 
 Migrations create buildings, stalls, merchants, products, receipts, reviews,
-vouches, testimonials, FAQs, platform stats and demo OTP storage, then seed a
-realistic Nairobi CBD dataset.
+vouches, testimonials, FAQs, platform stats and the `app_users` email+password
+auth table, then seed a realistic Nairobi CBD directory dataset (marked
+`is_demo = true` in `merchants` so it can be told apart from real users).
 
-## Deploy to Netlify
+## Verify
 
-1. Push this repo to GitHub.
-2. Netlify: Add new site > Import from Git. The site auto-deploys on every push
-   (live: https://plugnply.netlify.app).
-3. Build command `npm run build`, the Netlify Next.js plugin is wired in
-   `netlify.toml`.
-4. Environment variables ship in two places:
-   - `netlify.toml [build.environment]` carries the five runtime vars so builds
-     render live Supabase data out of the box.
-   - The same five are mirrored as encrypted GitHub Actions repo secrets
-     (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
-     `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SITE_URL`, `SESSION_SECRET`).
+```bash
+npm run build && npm run start          # server on :3000
+bash scripts/auth_flow_test.sh http://localhost:3000   # API-level auth e2e
+python3 scripts/browser_e2e.py http://localhost:3000   # browser-level auth e2e
+```
+
+`auth_flow_test.sh` covers: validation, registration, duplicate rejection,
+wrong-password rejection, clean-state bootstrap (empty catalogue/sales for new
+accounts), agent role signup, session, logout. `browser_e2e.py` walks the real
+UI: register → clean dashboard → sign out → sign back in.
+
+## Deploy
+
+Two supported paths:
+
+1. **Netlify (current live site: https://plugnply.netlify.app).** Build command
+   `npm run build`, the Netlify Next.js plugin is wired in `netlify.toml`.
+   - CI/CD: `deploy-netlify.yml` runs on every push to `main`. It builds with the
+     encrypted GitHub repo secrets and deploys with `NETLIFY_AUTH_TOKEN` +
+     `NETLIFY_SITE_ID`. Add those two secrets once and every push ships
+     automatically. Without them the workflow still runs lint + build as CI.
+   - Environment variables ship in two places:
+     - `netlify.toml [build.environment]` carries the five runtime vars so
+       manual builds render live Supabase data out of the box.
+     - The same five are mirrored as encrypted GitHub Actions repo secrets
+       (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+       `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SITE_URL`, `SESSION_SECRET`).
    - Rotating a key? Update the Netlify UI value first, then strip it from
      `netlify.toml` in the same commit.
-5. Deploy.
+2. **GitHub Actions CI** (`ci.yml`): lint + production build on every push/PR
+   so a broken build never reaches deployment.

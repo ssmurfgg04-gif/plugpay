@@ -12,6 +12,9 @@ import { RouteEffects } from "@/components/shared/RouteEffects";
 // client only (no server/client markup to mismatch).
 export function AppRoot({ children }) {
   const [mounted, setMounted] = useState(false);
+  // Standard SSR-safety gate: the store reads localStorage/time at render,
+  // so the tree must mount client-side only. Suppression is intentional.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setMounted(true), []);
   if (!mounted) return null;
   return (

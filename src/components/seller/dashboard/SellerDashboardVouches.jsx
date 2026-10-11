@@ -3,33 +3,20 @@
 import { usePlugPay } from "@/store/context";
 import { usePersisted } from "@/lib/shared";
 
+// The prototype pre-seeded three fake people (ids v1/v2/u1). Filter them out
+// at render time; the next list write replaces the stored value without them.
+var LEGACY_SEED_IDS = ["v1", "v2", "u1"];
+
 export function SellerDashboardVouches() {
   var pp = usePlugPay();
   var _v = usePersisted("vouches", {
-      people: [
-        {
-          id: "v1",
-          name: "Peter Otieno",
-          role: "Electronics seller",
-          vouched: true,
-        },
-        {
-          id: "v2",
-          name: "Amina Kibe",
-          role: "Fashion seller",
-          vouched: true,
-        },
-        {
-          id: "u1",
-          name: "Samuel Kamau",
-          role: "Mobile accessories",
-          vouched: false,
-        },
-      ],
+      people: [],
     }),
     state = _v[0],
     setState = _v[1];
-  var people = state.people || [];
+  var people = (state.people || []).filter(function (x) {
+    return LEGACY_SEED_IDS.indexOf(x.id) < 0;
+  });
   function setVouch(id, value) {
     setState({
       people: people.map(function (x) {

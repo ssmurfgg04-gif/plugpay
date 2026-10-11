@@ -4,44 +4,14 @@ import { usePlugPay } from "@/store/context";
 import { useSV } from "@/lib/public";
 import { initials, relTime } from "@/lib/shared";
 
-var REVIEWS = [
-  {
-    initials: "JK",
-    bg: "#1e3a5f",
-    fg: "#60a5fa",
-    name: "James Kamau",
-    date: "2 days ago",
-    stars: 5,
-    text: "Bought a Samsung Galaxy. Genuine product, great price. Comes with 30-day warranty as promised. Fast delivery too.",
-    receipt: "#01201",
-  },
-  {
-    initials: "FO",
-    bg: "#380b33",
-    fg: "#e557d6",
-    name: "Faith Otieno",
-    date: "1 week ago",
-    stars: 5,
-    text: "Best electronics shop in Moi Avenue. Honest seller, original products. Will definitely come back.",
-    receipt: "#01187",
-  },
-  {
-    initials: "BN",
-    bg: "#3c1f6e",
-    fg: "#a78bfa",
-    name: "Brian Njoroge",
-    date: "2 weeks ago",
-    stars: 4,
-    text: "Good laptop at fair price. Would have preferred original box but overall happy with the purchase.",
-    receipt: "#01156",
-  },
-];
-
 export function ReviewsTab() {
   var pp = usePlugPay();
   var sv = useSV();
   var st = sv.stats;
-  var fresh = sv.reviews.map(function (r) {
+  // Real reviews only: own profile lists receipt-anchored reviews from actual
+  // sales; viewed sellers show database reviews hydrated from
+  // /api/public/seller/[slug]. Empty means empty — no seeded sample reviews.
+  var list = sv.reviews.map(function (r) {
     return {
       initials: initials(r.buyerName || "Buyer"),
       bg: "#380b33",
@@ -50,10 +20,9 @@ export function ReviewsTab() {
       date: relTime(r.at),
       stars: r.rating,
       text: r.comment || "Left a star rating.",
-      receipt: r.code,
+      receipt: r.code || r.receiptNo || "",
     };
   });
-  var list = sv.own ? fresh.concat(REVIEWS) : REVIEWS.slice(0, Math.min(REVIEWS.length, st.reviewCount));
   var rounded = Math.round(st.avg);
   return (
     <div
@@ -76,7 +45,7 @@ export function ReviewsTab() {
         <div className="rev-bars">
           {[5, 4, 3, 2, 1].map(function (n) {
             var c = st.dist[n] || 0,
-              pct = Math.round((c / st.reviewCount) * 100);
+              pct = st.reviewCount > 0 ? Math.round((c / st.reviewCount) * 100) : 0;
             return (
               <div className="rev-bar-row" key={n}>
                 <span className="rev-bar-lbl">{n}</span>
@@ -95,6 +64,11 @@ export function ReviewsTab() {
         </div>
       </div>
       <div className="rev-list">
+        {list.length === 0 && (
+          <small className="sp-vouch-empty" style={{ padding: "12px 4px", display: "block" }}>
+            No reviews yet. Reviews come from real buyers with a receipt number.
+          </small>
+        )}
         {list.map(function (r) {
           return (
             <div className="rev-item" key={r.name + r.receipt}>
@@ -126,7 +100,9 @@ export function ReviewsTab() {
                 </div>
               </div>
               <div className="rev-item-text">{r.text}</div>
-              <div className="rev-verified">{"\u2713 Verified buyer \u00b7 Receipt " + r.receipt}</div>
+              {r.receipt ? (
+                <div className="rev-verified">{"\u2713 Verified buyer \u00b7 Receipt " + r.receipt}</div>
+              ) : null}
             </div>
           );
         })}

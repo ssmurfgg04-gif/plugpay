@@ -52,7 +52,7 @@ export function ResultsSection() {
         </div>
         <div className="results-grid" id="results-grid">
           {shownResults.map((r, i) => (
-            <ResultCard result={r} />
+            <ResultCard key={r.key || (r.name || "") + i} result={r} />
           ))}
         </div>
         <div

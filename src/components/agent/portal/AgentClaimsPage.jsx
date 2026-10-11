@@ -2,11 +2,22 @@
 
 import { usePlugPay } from "@/store/context";
 import { AppShellX } from "@/components/layout/AppShellX";
+import { DashSignIn } from "@/components/layout/DashSignIn";
 import { claimLink } from "@/lib/agent";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 export function AgentClaimsPage() {
   var pp = usePlugPay();
+  if (!pp.sessionInfo || pp.sessionInfo.role !== "agent") {
+    return (
+      <AppShellX role="Agent" active="claims" title="Seller claim links">
+        <DashSignIn
+          msg="Sign in to your agent account to view seller claim links."
+          onClick={pp.openAuthModal}
+        />
+      </AppShellX>
+    );
+  }
   return (
     <AppShellX
       role="Agent"

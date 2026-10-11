@@ -17,38 +17,40 @@ export function SellerPortalShell(props) {
         <TopBar
           title={pp.sellerProfile.bizName || "My Business"}
           actions={
-            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-              <button
-                className="tp-navbar-btn"
-                style={{
-                  width: "auto",
-                  padding: "0 12px",
-                  fontSize: 10,
-                  fontWeight: 800,
-                }}
-                onClick={function () {
-                  pp.viewSellerProfile();
-                }}
-              >
-                View profile
-              </button>
-              <button
-                className="tp-navbar-btn"
-                style={{
-                  width: "auto",
-                  padding: "0 10px",
-                  fontSize: 10,
-                  fontWeight: 800,
-                  opacity: 0.85,
-                }}
-                aria-label="Sign out"
-                onClick={function () {
-                  pp.authLogout();
-                }}
-              >
-                Sign out
-              </button>
-            </div>
+            pp.merchantLoggedIn ? (
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <button
+                  className="tp-navbar-btn"
+                  style={{
+                    width: "auto",
+                    padding: "0 12px",
+                    fontSize: 10,
+                    fontWeight: 800,
+                  }}
+                  onClick={function () {
+                    pp.viewSellerProfile();
+                  }}
+                >
+                  View profile
+                </button>
+                <button
+                  className="tp-navbar-btn"
+                  style={{
+                    width: "auto",
+                    padding: "0 10px",
+                    fontSize: 10,
+                    fontWeight: 800,
+                    opacity: 0.85,
+                  }}
+                  aria-label="Sign out"
+                  onClick={function () {
+                    pp.authLogout();
+                  }}
+                >
+                  Sign out
+                </button>
+              </div>
+            ) : null
           }
         />
       }

@@ -137,7 +137,7 @@ export function AuthEmailStep() {
               style={{ ...authTextInput, ...focusRing }}
               type="text"
               autoComplete="organization"
-              placeholder="e.g. Wanjiku Electronics"
+              placeholder="e.g. Kileleshwa Hardware"
               value={authBusinessName}
               onChange={(e) => setAuthBusinessName(e.target.value)}
             />

@@ -2,10 +2,21 @@
 
 import { usePlugPay } from "@/store/context";
 import { AppShellX } from "@/components/layout/AppShellX";
+import { DashSignIn } from "@/components/layout/DashSignIn";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 export function AgentBuildingsPage() {
   var pp = usePlugPay();
+  if (!pp.sessionInfo || pp.sessionInfo.role !== "agent") {
+    return (
+      <AppShellX role="Agent" active="buildings" title="Agent buildings">
+        <DashSignIn
+          msg="Sign in to your agent account to view your onboarded buildings."
+          onClick={pp.openAuthModal}
+        />
+      </AppShellX>
+    );
+  }
   return (
     <AppShellX
       role="Agent"

@@ -15,7 +15,7 @@ name: Deploy to Netlify
 
 on:
   push:
-    branches: [main]
+    branches: [m[main]
   workflow_dispatch:
 
 jobs:

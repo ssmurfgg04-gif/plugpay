@@ -79,7 +79,7 @@ export async function GET() {
 
     // ---- Public directory (same for everyone) -------------------------------
     const [bRes, mRes] = await Promise.all([
-      db.from('buildings').select('id, slug, name, address, area, floors, total_stalls, registered_merchants, coverage_pct'),
+      db.from('buildings').select('id, slug, name, address, area, floors, total_stalls, registered_merchants, coverage_pct, maps_url, category, landlord_name, landlord_phone, landlord_email, created_by'),
       db.from('merchants').select('id, slug, business_name, owner_name, category, building_name, stall_label, verified, trust_score, sales_count, rating_avg, rating_count, vouches_received, avatar_url, bio, about, street, phone, whatsapp, instagram, tiktok, facebook, established_year'),
     ]);
 
@@ -126,6 +126,24 @@ export async function GET() {
           role: String(r.role ?? 'Rider'),
         }));
       }
+    }
+
+    // ---- Agent buildings: private to the agent who onboarded them -------------
+    let agentBuildings: Record<string, unknown>[] = [];
+    if (session?.role === 'agent') {
+      const { data: agentBuildingRows } = await db.from('buildings')
+        .select('id, slug, name, address, floors, total_stalls, registered_merchants')
+        .eq('created_by', session.userId)
+        .order('created_at', { ascending: false });
+      agentBuildings = (agentBuildingRows ?? []).map((b: Record<string, unknown>) => ({
+        id: String(b.id ?? ''),
+        slug: String(b.slug ?? ''),
+        name: String(b.name ?? ''),
+        street: String(b.address ?? ''),
+        floorsCount: Number(b.floors ?? 0),
+        stalls: Number(b.total_stalls ?? 0),
+        merchants: Number(b.registered_merchants ?? 0),
+      }));
     }
 
     // ---- Claims: only for signed-in agents (their worklist) ------------------
@@ -211,7 +229,7 @@ export async function GET() {
             color: '#8a8a8a',
           }));
         const vacant = stallsRows
-          .filter((s: Record<string, unknown>) => s.status === 'vacant' && bRow && s.building_id === bRow.id)
+          .filter((s: Record<string, unknown>) => ['vacant', 'unregistered'].includes(String(s.status ?? '')) && bRow && s.building_id === bRow.id)
           .map((s: Record<string, unknown>) => {
             const floor = String(s.floor ?? '');
             return {
@@ -283,6 +301,12 @@ export async function GET() {
       stalls: Number(b.total_stalls ?? 0),
       registered: Number(b.registered_merchants ?? 0),
       pct: Number(b.coverage_pct ?? 0),
+      mapsUrl: String(b.maps_url ?? ''),
+      category: String(b.category ?? ''),
+      landlordName: String(b.landlord_name ?? ''),
+      landlordPhone: String(b.landlord_phone ?? ''),
+      landlordEmail: String(b.landlord_email ?? ''),
+      slug: String(b.slug ?? ''),
     }));
 
     return NextResponse.json({
@@ -298,6 +322,7 @@ export async function GET() {
       claims,
       lbAccounts,
       lbData,
+      agentBuildings,
       directorySellers,
       directoryBuildings,
       riders,

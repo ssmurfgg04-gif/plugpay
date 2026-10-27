@@ -1,7 +1,7 @@
 "use client";
 
 import { usePlugPay } from "@/store/context";
-import { buildings, ppResolveBuilding } from "@/lib/building";
+import { buildings, ppResolveBuilding, ppSlug } from "@/lib/building";
 import { BuildingView } from "@/components/building/BuildingView";
 
 function resolvePublicStallSeller(stall) {
@@ -246,6 +246,9 @@ export function BuildingViewContainer(p) {
   var pp = usePlugPay();
   var ll = !!p.landlord;
   var b =
+    (pp.buildingDirectory || []).filter(function (item) {
+      return ppSlug(item.name) === ppSlug(p.id);
+    })[0] ||
     ppResolveBuilding(p.id, pp.lbAccounts, pp.agentBuildings) ||
     (p.id
       ? {

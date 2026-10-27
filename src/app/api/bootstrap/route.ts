@@ -131,7 +131,7 @@ export async function GET() {
     // ---- Claims: only for signed-in agents (their worklist) ------------------
     let claims: Record<string, unknown>[] = [];
     if (session?.role === 'agent') {
-      const { data: cRes } = await db.from('claims').select('*').order('created_at', { ascending: false }).limit(200);
+      const { data: cRes } = await db.from('claims').select('*').eq('created_by', session.userId).order('created_at', { ascending: false }).limit(200);
       claims = (cRes ?? []).map((c: Record<string, unknown>) => ({
         id: String(c.client_id ?? c.token ?? ''),
         token: String(c.token ?? ''),

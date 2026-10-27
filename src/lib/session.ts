@@ -3,13 +3,17 @@
 // deliberately no JWT/OAuth machinery: the API layer is the only DB client.
 import crypto from 'crypto';
 import { cookies } from 'next/headers';
+import { GEN_SESSION_SECRET } from '@/lib/env.gen';
 
+// Netlify does not expose build.environment to function runtime. gen-env.mjs
+// bakes the configured secret into a server-only module during the build.
 const SECRET =
   process.env.SESSION_SECRET ||
   process.env.PLUGPAY_SESSION_SECRET ||
-  'plugpay-demo-secret-2026-nairobi';
-export const SESSION_COOKIE = 'pp_session';
+  GEN_SESSION_SECRET ||
+  (process.env.NODE_ENV === 'production' ? '' : 'plugpay-local-development-only-change-me');
 
+export const SESSION_COOKIE = 'pp_session';
 export type PortalRole = 'trader' | 'landlord' | 'agent';
 
 export interface SessionPayload {
@@ -22,6 +26,7 @@ export interface SessionPayload {
 }
 
 function sign(data: string): string {
+  if (!SECRET) throw new Error('SESSION_SECRET must be configured before issuing portal sessions.');
   return crypto.createHmac('sha256', SECRET).update(data).digest('base64url');
 }
 
@@ -31,7 +36,8 @@ export function serializeSession(payload: SessionPayload): string {
 }
 
 export function parseSession(token: string | undefined): SessionPayload | null {
-  if (!token) return null;
+  // Fail closed in production if the deployment did not inject a secret.
+  if (!SECRET || !token) return null;
   const [body, sig] = token.split('.');
   if (!body || !sig) return null;
   const expected = sign(body);
@@ -40,12 +46,12 @@ export function parseSession(token: string | undefined): SessionPayload | null {
   }
   try {
     const raw = JSON.parse(Buffer.from(body, 'base64url').toString()) as Partial<SessionPayload>;
-    // Sessions issued before the email-auth migration are invalid.
-    if (!raw.userId || !raw.email || !raw.role) return null;
+    const roles: PortalRole[] = ['trader', 'landlord', 'agent'];
+    if (!raw.userId || !raw.email || !roles.includes(raw.role as PortalRole)) return null;
     return {
       userId: String(raw.userId),
       email: String(raw.email),
-      role: raw.role,
+      role: raw.role as PortalRole,
       merchantSlug: raw.merchantSlug ?? null,
       landlordId: raw.landlordId ?? null,
       iat: Number(raw.iat) || 0,
@@ -92,7 +98,7 @@ export function verifyPassword(password: string, stored: string | null | undefin
   return candidate.length === expected.length && crypto.timingSafeEqual(candidate, expected);
 }
 
-export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+export const EMAIL_RE = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$/;
 
 export function normalizeEmail(email: string): string {
   return String(email || '').trim().toLowerCase();

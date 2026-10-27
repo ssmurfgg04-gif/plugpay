@@ -34,29 +34,6 @@ export function SellerDashboardTab() {
     });
   });
   var demo = rows.length === 0;
-  if (demo && cat.length) {
-    var seed = 7,
-      rnd = function () {
-        seed = (seed * 9301 + 49297) % 233280;
-        return seed / 233280;
-      };
-    for (var d = 0; d < 800; d++) {
-      var n = 1 + Math.floor(rnd() * 4);
-      for (var k = 0; k < n; k++) {
-        var p = cat[Math.floor(rnd() * rnd() * cat.length)];
-        var dt = new Date();
-        dt.setHours(9 + Math.floor(rnd() * 9), 0, 0, 0);
-        dt.setDate(dt.getDate() - d);
-        rows.push({
-          name: p.name,
-          amt: Number(p.price) || 0,
-          qty: 1,
-          cat: p.category,
-          at: dt,
-        });
-      }
-    }
-  }
   var DAY = 86400000,
     i,
     now = new Date();

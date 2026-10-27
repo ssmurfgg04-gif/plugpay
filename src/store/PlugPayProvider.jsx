@@ -8,6 +8,7 @@ import { buildings, ppSlug } from "@/lib/building";
 import { openWhatsApp, reviewLink, reviewStatus } from "@/lib/seller";
 import { PlugPayContext } from "@/store/context";
 import { claimLink } from "@/lib/agent";
+import { shareSalesDocument } from "@/lib/sales-document-image";
 
 // Fire-and-forget POST to the backend. Returns the parsed JSON response, or
 // null when the API is unreachable so callers can fall back to local demo mode.
@@ -889,7 +890,17 @@ export function PlugPayProvider({ children }) {
         delivery: "pickup",
       });
       decrementStock(clean);
-      openWhatsApp(rc.buyerPhone, waReceiptText(rc, sellerProfile.bizName));
+      shareSalesDocument({
+        kind: "receipt",
+        seller: sellerProfile,
+        stallAssignment: stallAssignmentClean,
+        doc: rc,
+        publicUrl: receiptLink(rc.code),
+        phone: rc.buyerPhone,
+        text: waReceiptText(rc, sellerProfile.bizName),
+        openWhatsApp,
+        showToast,
+      });
       setReceipt({
         kind: "receipt",
         code,
@@ -899,7 +910,7 @@ export function PlugPayProvider({ children }) {
         items: clean,
         total,
       });
-      showToast(`Receipt sent to ${rsName} on WhatsApp \u2713 Review link attached`);
+
     } else {
       const token = "inv" + Date.now().toString(36);
       const inv = {
@@ -913,7 +924,17 @@ export function PlugPayProvider({ children }) {
         createdAt: now,
       };
       setInvoicesList((l) => [inv, ...l]);
-      openWhatsApp(inv.buyerPhone, waInvoiceText(inv, sellerProfile.bizName));
+      shareSalesDocument({
+        kind: "invoice",
+        seller: sellerProfile,
+        stallAssignment: stallAssignmentClean,
+        doc: inv,
+        publicUrl: invoiceLink(inv.token),
+        phone: inv.buyerPhone,
+        text: waInvoiceText(inv, sellerProfile.bizName),
+        openWhatsApp,
+        showToast,
+      });
       setReceipt({
         kind: "invoice",
         code: token,
@@ -923,7 +944,7 @@ export function PlugPayProvider({ children }) {
         items: clean,
         total,
       });
-      showToast(`Invoice sent to ${rsName} on WhatsApp \u2713`);
+
     }
     setRsName("");
     setRsPhone("");
@@ -935,8 +956,18 @@ export function PlugPayProvider({ children }) {
   const resendInvoice = (token) => {
     const inv = invoicesList.filter((x) => x.token === token)[0];
     if (!inv) return;
-    openWhatsApp(inv.buyerPhone, waInvoiceText(inv, sellerProfile.bizName));
-    showToast(`Invoice resent to ${inv.buyerName} on WhatsApp`);
+    shareSalesDocument({
+        kind: "invoice",
+        seller: sellerProfile,
+        stallAssignment: stallAssignmentClean,
+        doc: inv,
+        publicUrl: invoiceLink(inv.token),
+        phone: inv.buyerPhone,
+        text: waInvoiceText(inv, sellerProfile.bizName),
+        openWhatsApp,
+        showToast,
+      });
+
   };
   const convertInvoiceToReceipt = (token, code) => {
     const inv = invoicesList.filter((x) => x.token === token)[0];
@@ -1045,22 +1076,18 @@ export function PlugPayProvider({ children }) {
           : x,
       ),
     );
-    openWhatsApp(
-      r.buyerPhone,
-      waReceiptText(
-        {
-          ...r,
-          sentAt,
-        },
-        sellerProfile.bizName,
-      ),
-    );
-    showToast(
-      r.sentAt
-        ? `Receipt resent to ${r.buyerName || "buyer"} \u2713`
-        : `Receipt sent to ${r.buyerName || "buyer"} \u2713 Stock updated, review link attached`,
-    );
-    return true;
+    shareSalesDocument({
+      kind: "receipt",
+      seller: sellerProfile,
+      stallAssignment: stallAssignmentClean,
+      doc: { ...r, sentAt },
+      publicUrl: receiptLink(r.code),
+      phone: r.buyerPhone,
+      text: waReceiptText({ ...r, sentAt }, sellerProfile.bizName),
+      openWhatsApp,
+      showToast,
+    });
+return true;
   };
   const submitReview = (code, data) => {
     const c = codeOf(code);
@@ -1448,9 +1475,18 @@ export function PlugPayProvider({ children }) {
     openWhatsApp(c.phone, waClaimText(c));
     showToast(`Claim link resent to ${c.ownerName || c.businessName} on WhatsApp`);
   };
-  const openClaimSignIn = (token) => {
-    const c = agentClaims.filter((x) => x.token === token)[0];
-    if (!c) return;
+  const openClaimSignIn = (token, claimOverride) => {
+    const c = claimOverride || agentClaims.filter((x) => x.token === token)[0];
+    if (!c || c.status === "CLAIMED") return;
+
+    // The public claim URL is opened on the seller's own device, so hydrate
+    // the invitation locally before the authenticated signup flow completes.
+    setAgentClaims((list) => {
+      const exists = list.some((x) => x.token === token);
+      return exists
+        ? list.map((x) => (x.token === token ? { ...x, ...c } : x))
+        : [c, ...list];
+    });
     claimTokenRef.current = token;
     setClaimInfo({
       token,
@@ -1458,17 +1494,29 @@ export function PlugPayProvider({ children }) {
       loc: c.loc,
       building: c.buildingName,
     });
-    setAuthStep("phone");
-    setAuthOtp("");
-    setAuthPinLoginValue("");
-    setAuthSetPinValue("");
-    setAuthMethodState("whatsapp");
-    setAuthPhone(c.phone || "");
+    setAuthStep("email");
+    setAuthRole("trader");
+    setAuthMode("register");
+    setAuthEmail("");
+    setAuthPassword("");
+    setAuthBusinessName(c.businessName || c.ownerName || "");
+    setAuthError("");
     openModal("modal-register");
   };
   const applyClaim = (token) => {
     const c = agentClaims.filter((x) => x.token === token)[0];
     if (!c) return;
+
+    // Persist the claim and attach its stall to the newly signed-in seller.
+    // Don't claim local drafts that were never published to the server.
+    if (!c.draft) {
+      apiPost("/api/claims", { action: "claimed", token }).then((result) => {
+        if (!result || result.ok !== true) {
+          showToast(result?.error || "Your claim could not be saved. Contact your agent before recording sales.");
+        }
+      });
+    }
+
     const same = sameNumber(c.phone, sellerProfile.phone);
     const loc = c.loc || "";
     setAgentClaims((l) =>
@@ -2251,32 +2299,49 @@ function invoiceLink(t) {
   return appBase() + "/pay/" + encodeURIComponent(t);
 }
 
+function waDocDate(value) {
+  const d = new Date(value || Date.now());
+  return Number.isNaN(d.getTime())
+    ? ""
+    : d.toLocaleDateString("en-KE", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function waDocItems(items) {
+  return (items || [])
+    .filter((item) => item && item.name)
+    .map((item) => {
+      const qty = Math.max(1, Number(item.qty) || 1);
+      return qty + " × " + item.name + " — KSh " + Number(item.price || 0).toLocaleString("en-KE");
+    })
+    .join("\n");
+}
+
 function waReceiptText(r, seller) {
-  return (
-    "Hi " +
-    (r.buyerName || "there") +
-    ", thanks for buying from " +
-    seller +
-    ". Here's your PlugPay receipt for KSh " +
-    Number(r.total).toLocaleString() +
-    ":\n" +
-    receiptLink(r.code) +
-    "\n\nHow did we do? Rate your purchase (one review per receipt, link open for 6 hours):\n" +
-    reviewLink(r.code)
-  );
+  const key = codeOf(r.code);
+  const lines = [
+    "Hi " + ((r.buyerName || "there").trim().split(/\s+/)[0] || "there") + ", thanks for buying from " + seller + ". Your receipt image is attached.",
+    "",
+    "*RECEIPT " + r.code + "* · " + waDocDate(r.createdAt),
+    waDocItems(r.items),
+    "*Total paid: KSh " + Number(r.total || 0).toLocaleString("en-KE") + "*",
+  ];
+  if (r.paymentRef) lines.push("Paid via M-Pesa · Ref " + r.paymentRef);
+  lines.push("", "View your receipt online:", receiptLink(r.code), "", "How did we do? Rate your purchase (one review per receipt, link open for 6 hours):", reviewLink(key));
+  return lines.filter((line) => line !== undefined).join("\n");
 }
 
 function waInvoiceText(inv, seller) {
-  return (
-    "Hi " +
-    (inv.buyerName || "there") +
-    ", here's your PlugPay invoice from " +
-    seller +
-    " for KSh " +
-    Number(inv.total).toLocaleString() +
-    ":\n" +
-    invoiceLink(inv.token)
-  );
+  const lines = [
+    "Hi " + ((inv.buyerName || "there").trim().split(/\s+/)[0] || "there") + ", here's your invoice from " + seller + ". The invoice image is attached.",
+    "",
+    "*INVOICE " + (inv.number || inv.token) + "* · " + waDocDate(inv.createdAt),
+    waDocItems(inv.items),
+    "*Total due: KSh " + Number(inv.total || 0).toLocaleString("en-KE") + "*",
+    "",
+    "View and pay online:",
+    invoiceLink(inv.token),
+  ];
+  return lines.filter((line) => line !== undefined).join("\n");
 }
 
 

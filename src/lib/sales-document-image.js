@@ -56,7 +56,7 @@ export function createSalesDocumentImage(options) {
     const width = 900;
     const pad = 54;
     const rowHeight = 58;
-    const height = 850 + items.length * rowHeight;
+    const height = 1000 + items.length * rowHeight;
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;

@@ -8,7 +8,7 @@ export function SellerDashboardTabSection7() {
   var demo = __c.demo;
   return (
     demo && (
-      <div className="dx-note">Showing sample data. Record a sale and your real numbers appear here.</div>
+      <div className="dx-note">No sales yet. Record a sale to see your real analytics here.</div>
     )
   );
 }

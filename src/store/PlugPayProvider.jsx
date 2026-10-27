@@ -70,11 +70,17 @@ export function PlugPayProvider({ children }) {
   // in the README) and is replaced by the real database directory as soon as
   // /api/bootstrap returns it. All lookups below read this list.
   const [directory, setDirectory] = useState(merchants);
+  const [buildingDirectory, setBuildingDirectory] = useState(buildings);
   useEffect(() => {
     fetch("/api/bootstrap")
       .then((r) => r.json())
       .then((d) => {
         if (d && d.ok && Array.isArray(d.directorySellers)) setDirectory(d.directorySellers);
+        if (d && d.ok && Array.isArray(d.directoryBuildings)) {
+          const live = d.directoryBuildings;
+          const names = new Set(live.map((b) => ppSlug(b.name)));
+          setBuildingDirectory([...live, ...buildings.filter((b) => !names.has(ppSlug(b.name)))]);
+        }
       })
       .catch(() => {});
   }, []);
@@ -299,7 +305,7 @@ export function PlugPayProvider({ children }) {
   const [filter, setFilterState] = useState("all");
   const [resultsTitle, setResultsTitle] = useState("Search results");
   const [resultsMeta, setResultsMeta] = useState("Showing top matches");
-  const pool = useMemo(() => [...directory, ...buildings], [directory, buildings]);
+  const pool = useMemo(() => [...directory, ...buildingDirectory], [directory, buildingDirectory]);
   const doSearch = useCallback(
     (q) => {
       var _a;
@@ -1708,6 +1714,12 @@ return true;
           .then((r) => r.json())
           .then((d) => {
             if (!d || !d.ok) return;
+            if (Array.isArray(d.directorySellers)) setDirectory(d.directorySellers);
+            if (Array.isArray(d.directoryBuildings)) {
+              const live = d.directoryBuildings;
+              const names = new Set(live.map((b) => ppSlug(b.name)));
+              setBuildingDirectory([...live, ...buildings.filter((b) => !names.has(ppSlug(b.name)))]);
+            }
             try {
               if (d.session && d.session.merchantSlug) {
                 // Signed in: the database is the source of truth for own records.
@@ -1956,6 +1968,7 @@ return true;
     copyText,
     viewedSeller,
     directory,
+    buildingDirectory,
     loadSellerPage,
     openDirectorySeller,
     openSellerRef,

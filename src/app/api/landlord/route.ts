@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       if (!name || !phone || !stall || !category) {
         return jsonError('Seller name, phone, category and stall are required', 400);
       }
-      if (!/^(?:0\\d{9}|\\+?254\\d{9})$/.test(phone.replace(/[\\s()-]/g, ''))) {
+      if (!/^(?:0\d{9}|\+?254\d{9})$/.test(phone.replace(/[\s()-]/g, ''))) {
         return jsonError('Enter a valid Kenyan seller phone number', 400);
       }
 

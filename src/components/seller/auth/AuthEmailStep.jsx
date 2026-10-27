@@ -76,6 +76,11 @@ export function AuthEmailStep() {
       sub: "Onboard buildings and register traders. Sign in with your email and password.",
       cta: "Create agent account",
     },
+    admin: {
+      title: "PlugPay administration",
+      sub: "Restricted access for authorised PlugPay administrators. Use your provisioned email and password.",
+      cta: "Sign in",
+    },
   }[authRole || "trader"];
 
   return (
@@ -100,7 +105,7 @@ export function AuthEmailStep() {
         <div style={{ fontSize: "13px", color: "var(--muted)", lineHeight: "1.55" }}>{roleCopy.sub}</div>
       </div>
 
-      <div style={authToggleWrap} role="tablist" aria-label="Sign in or create account">
+      {authRole !== "admin" && <div style={authToggleWrap} role="tablist" aria-label="Sign in or create account">
         <button
           type="button"
           role="tab"
@@ -119,7 +124,7 @@ export function AuthEmailStep() {
         >
           Create account
         </button>
-      </div>
+      </div>}
 
       <form
         onSubmit={(e) => {
@@ -214,7 +219,7 @@ export function AuthEmailStep() {
         </button>
       </form>
 
-      <div style={{ marginTop: "16px", textAlign: "center", fontSize: "12.5px", color: "var(--muted)", lineHeight: "1.6" }}>
+      {authRole !== "admin" && <div style={{ marginTop: "16px", textAlign: "center", fontSize: "12.5px", color: "var(--muted)", lineHeight: "1.6" }}>
         {authMode === "signin" ? (
           <span>
             New to PlugPay?{" "}
@@ -229,7 +234,7 @@ export function AuthEmailStep() {
         ) : (
           <span>Your data stays yours</span>
         )}
-      </div>
+      </div>}
     </div>
   );
 }

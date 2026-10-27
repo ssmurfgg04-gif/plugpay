@@ -32,7 +32,7 @@ export function ReceiptModal() {
     >
       <div className="rm-top">
         <div className="rm-icon">{isInv ? "\uD83D\uDCC4" : "\uD83E\uDDFE"}</div>
-        <div className="rm-title">{isInv ? "Invoice sent!" : "Receipt sent!"}</div>
+        <div className="rm-title">{isInv ? "Invoice ready to share" : "Receipt ready to share"}</div>
         <div className="rm-sub">
           {isInv
             ? "Payment link delivered \u00b7 add the M-Pesa code once it's paid"
@@ -63,7 +63,7 @@ export function ReceiptModal() {
             {"\u2713"}
           </span>
           <div>
-            <div className="rm-verified-text">Sent to the buyer's WhatsApp</div>
+            <div className="rm-verified-text">PNG and message ready to share</div>
             <div
               className="rm-verified-text"
               style={{
@@ -85,7 +85,7 @@ export function ReceiptModal() {
               else pp.sendReceipt(r.code);
             }}
           >
-            {isInv ? "Resend on WhatsApp" : "Resend with review link"}
+            {isInv ? "Share invoice PNG again" : "Share receipt PNG again"}
           </button>
           <ReceiptOpenButton isInv={isInv} code={r.code} />
           <ReceiptDoneButton />

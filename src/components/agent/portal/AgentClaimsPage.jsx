@@ -23,7 +23,7 @@ export function AgentClaimsPage() {
       role="Agent"
       active="claims"
       title="Seller claim links"
-      subtitle="A claim link goes to each seller's WhatsApp as soon as you register them. It opens the sign-in page."
+      subtitle="Claim links are created for registered sellers. Use Share on WhatsApp to send each invitation; the seller opens the link on their own device."
     >
       <div className="app-list">
         {pp.agentClaims
@@ -53,7 +53,7 @@ export function AgentClaimsPage() {
                     </div>
                   </div>
                   <span className={"pp-status" + (c.status !== "INVITED" ? "" : " pending")}>
-                    {c.status === "INVITED" ? "LINK SENT" : "CLAIMED"}
+                    {c.status === "INVITED" ? "READY TO SEND" : "CLAIMED"}
                   </span>
                 </div>
                 {c.status === "INVITED" && (
@@ -64,7 +64,7 @@ export function AgentClaimsPage() {
                         pp.resendClaim(c.token);
                       }}
                     >
-                      Resend on WhatsApp
+                      Share on WhatsApp
                     </button>
                     <button
                       className="pp-btn secondary"
@@ -85,7 +85,7 @@ export function AgentClaimsPage() {
           <EmptyState
             icon="mail"
             title="No claim links yet"
-            sub="Register a seller in a building and their claim link is sent to WhatsApp automatically."
+            sub="Register a seller in a building, then share their claim link to WhatsApp from this page."
             action={{
               label: "Onboard a building",
               onClick: pp.openOnboard,

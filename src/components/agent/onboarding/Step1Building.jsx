@@ -6,6 +6,18 @@ export function Step1Building({ active = true }) {
   const {
     obBldgName,
     setObBldgName,
+    obStreet,
+    setObStreet,
+    obMapsUrl,
+    setObMapsUrl,
+    obLandlordName,
+    setObLandlordName,
+    obLandlordPhone,
+    setObLandlordPhone,
+    obLandlordEmail,
+    setObLandlordEmail,
+    obBuildingCategory,
+    setObBuildingCategory,
     obFloorsCount,
     setObFloorsCount,
     obFloorStalls,
@@ -39,11 +51,25 @@ export function Step1Building({ active = true }) {
       </div>
       <div className="ob-field">
         <label className="ob-label">Street / Location</label>
-        <input className="ob-input" type="text" placeholder="e.g. Mama Ngina Street, Nairobi CBD" />
+        <input
+          className="ob-input"
+          type="text"
+          placeholder="e.g. Mama Ngina Street, Nairobi CBD"
+          value={obStreet}
+          onChange={(e) => setObStreet(e.target.value)}
+          required
+        />
       </div>
       <div className="ob-field">
         <label className="ob-label">{"Google Maps Link \u2014 pinpoint exact location"}</label>
-        <input className="ob-input" type="url" placeholder="https://maps.app.goo.gl/…" inputMode="url" />
+        <input
+          className="ob-input"
+          type="url"
+          placeholder="https://maps.app.goo.gl/…"
+          inputMode="url"
+          value={obMapsUrl}
+          onChange={(e) => setObMapsUrl(e.target.value)}
+        />
         <div
           style={{
             fontSize: "10.5px",
@@ -198,21 +224,39 @@ export function Step1Building({ active = true }) {
       </div>
       <div className="ob-field">
         <label className="ob-label">Landlord / Manager Name</label>
-        <input className="ob-input" type="text" placeholder="e.g. Samuel Kariuki" />
+        <input
+          className="ob-input"
+          type="text"
+          placeholder="e.g. Samuel Kariuki"
+          value={obLandlordName}
+          onChange={(e) => setObLandlordName(e.target.value)}
+        />
       </div>
       <div className="ob-row-2">
         <div className="ob-field">
           <label className="ob-label">Landlord Phone</label>
-          <input className="ob-input" type="tel" placeholder="07XX XXX XXX" />
+          <input
+            className="ob-input"
+            type="tel"
+            placeholder="07XX XXX XXX"
+            value={obLandlordPhone}
+            onChange={(e) => setObLandlordPhone(e.target.value)}
+          />
         </div>
         <div className="ob-field">
           <label className="ob-label">Landlord Email</label>
-          <input className="ob-input" type="email" placeholder="landlord@email.com" />
+          <input
+            className="ob-input"
+            type="email"
+            placeholder="landlord@email.com"
+            value={obLandlordEmail}
+            onChange={(e) => setObLandlordEmail(e.target.value)}
+          />
         </div>
       </div>
       <div className="ob-field">
         <label className="ob-label">Building Category</label>
-        <select className="ob-select">
+        <select className="ob-select" value={obBuildingCategory} onChange={(e) => setObBuildingCategory(e.target.value)}>
           <option>Mixed retail (clothing + electronics + food)</option>
           <option>Fashion & Textiles</option>
           <option>Electronics & Hardware</option>

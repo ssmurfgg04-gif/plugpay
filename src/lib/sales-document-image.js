@@ -197,14 +197,12 @@ export function createSalesDocumentImage(options) {
       ctx.fillText(fitText(ctx, "M-Pesa · " + doc.paymentRef, width - pad * 2), pad, y + 27);
       y += 55;
     } else if (isInvoice) {
-      const due = new Date(doc.createdAt || Date.now());
-      due.setDate(due.getDate() + 14);
       ctx.fillStyle = MUTED;
       ctx.font = "600 15px Arial, sans-serif";
-      ctx.fillText("PAYMENT DUE", pad, y);
+      ctx.fillText("INVOICE DATE", pad, y);
       ctx.fillStyle = INK;
       ctx.font = "600 17px Arial, sans-serif";
-      ctx.fillText(dateLabel(due), pad, y + 27);
+      ctx.fillText(dateLabel(doc.createdAt), pad, y + 27);
       if (seller.payMethod || seller.paybill || seller.account) {
         ctx.fillStyle = MUTED;
         ctx.font = "600 15px Arial, sans-serif";
@@ -277,16 +275,20 @@ export function shareSalesDocument(options) {
 
   const fallback = () => {
     if (file) {
+      let downloaded = false;
       try {
         downloadFile(file);
+        downloaded = true;
       } catch (error) {
         // Keep the text fallback available even when downloads are blocked.
       }
       if (typeof openWhatsApp === "function") openWhatsApp(phone, text);
       if (typeof showToast === "function") {
-        showToast("PNG downloaded. WhatsApp has the summary ready; attach the image before sending.");
+        showToast(downloaded
+          ? "PNG downloaded. WhatsApp has the summary ready; attach the image before sending."
+          : "WhatsApp has the summary ready, but the PNG download failed. Open the online document link.");
       }
-      return "download";
+      return downloaded ? "download" : "text";
     }
     if (typeof openWhatsApp === "function") openWhatsApp(phone, text);
     if (typeof showToast === "function") {

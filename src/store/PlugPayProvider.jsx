@@ -2310,12 +2310,10 @@ function waReceiptText(r, seller) {
 }
 
 function waInvoiceText(inv, seller) {
-  const due = new Date(inv.createdAt || Date.now());
-  due.setDate(due.getDate() + 14);
   const lines = [
     "Hi " + ((inv.buyerName || "there").trim().split(/\s+/)[0] || "there") + ", here's your invoice from " + seller + ". The invoice image is attached.",
     "",
-    "*INVOICE " + (inv.number || inv.token) + "* · due " + waDocDate(due),
+    "*INVOICE " + (inv.number || inv.token) + "* · " + waDocDate(inv.createdAt),
     waDocItems(inv.items),
     "*Total due: KSh " + Number(inv.total || 0).toLocaleString("en-KE") + "*",
     "",

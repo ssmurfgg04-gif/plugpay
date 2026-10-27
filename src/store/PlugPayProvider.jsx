@@ -401,7 +401,7 @@ export function PlugPayProvider({ children }) {
       claimTokenRef.current = null;
       setClaimInfo(null);
       setAuthStep("email");
-      setAuthRole(role === "landlord" || role === "agent" ? role : "trader");
+      setAuthRole(role === "admin" ? "admin" : role === "landlord" || role === "agent" ? role : "trader");
       setAuthMode("signin");
       setAuthEmail("");
       setAuthPassword("");
@@ -757,6 +757,11 @@ export function PlugPayProvider({ children }) {
       closeModal("modal-register");
       showToast("Signed in as agent \u2713");
       navigate("/agent");
+      return;
+    }
+    if (role === "admin") {
+      closeModal("modal-register");
+      navigate("/admin");
       return;
     }
     setMerchantLoggedIn(true);
@@ -1154,6 +1159,12 @@ return true;
   const setObAgentVerifying = setObAgentBusy;
   const [obStep_, setObStep_] = useState(1);
   const [obBldgName, setObBldgName] = useState("");
+  const [obStreet, setObStreet] = useState("Nairobi CBD");
+  const [obMapsUrl, setObMapsUrl] = useState("");
+  const [obLandlordName, setObLandlordName] = useState("");
+  const [obLandlordPhone, setObLandlordPhone] = useState("");
+  const [obLandlordEmail, setObLandlordEmail] = useState("");
+  const [obBuildingCategory, setObBuildingCategory] = useState("Mixed retail (clothing + electronics + food)");
   const [obFloorsCount, setObFloorsCount] = useState("6");
   const [obFloorStalls, setObFloorStallsState] = useState({});
   const [obPayMethod, setObPayMethod] = useState("till");
@@ -1183,6 +1194,15 @@ return true;
     setObAgentMode("signin");
     setObMerchantList([]);
     setObEditingMerchantId(null);
+    setObBldgName("");
+    setObStreet("Nairobi CBD");
+    setObMapsUrl("");
+    setObLandlordName("");
+    setObLandlordPhone("");
+    setObLandlordEmail("");
+    setObBuildingCategory("Mixed retail (clothing + electronics + food)");
+    setObFloorsCount("6");
+    setObFloorStallsState({});
     setObStep_(1);
   }, [openModal]);
   const obAgentSendOtp = useCallback(() => {
@@ -2051,6 +2071,18 @@ return true;
     obStep,
     obBldgName,
     setObBldgName,
+    obStreet,
+    setObStreet,
+    obMapsUrl,
+    setObMapsUrl,
+    obLandlordName,
+    setObLandlordName,
+    obLandlordPhone,
+    setObLandlordPhone,
+    obLandlordEmail,
+    setObLandlordEmail,
+    obBuildingCategory,
+    setObBuildingCategory,
     obFloorsCount,
     setObFloorsCount,
     obFloorStalls,

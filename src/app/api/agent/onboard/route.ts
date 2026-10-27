@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
   try {
     const db = supabase();
     const { data: existing, error: findError } = await db.from('buildings')
-      .select('id, source, created_by')
+      .select('id, source, created_by, registered_merchants')
       .eq('slug', slug)
       .maybeSingle();
     if (findError) return NextResponse.json({ ok: false, error: 'Could not check the building directory' }, { status: 500 });
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
       area: 'Nairobi CBD',
       floors,
       total_stalls: totalRequested,
-      registered_merchants: 0,
+      registered_merchants: Number(existing?.registered_merchants ?? 0),
       coverage_pct: 0,
       source: 'agent',
       maps_url: mapsUrl || null,
@@ -124,6 +124,17 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const persistedStallCount = (currentStalls?.length ?? 0) + missing.length;
+    const persistedTotal = Math.max(totalRequested, persistedStallCount);
+    if (persistedTotal !== Number(savedBuilding.total_stalls ?? 0)) {
+      const { error: countError } = await db.from('buildings')
+        .update({ total_stalls: persistedTotal })
+        .eq('id', savedBuilding.id);
+      if (countError) {
+        return NextResponse.json({ ok: false, error: 'Building saved, but stall count could not be reconciled' }, { status: 500 });
+      }
+    }
+
     if (landlordName || landlordPhone || landlordEmail) {
       const { error: landlordError } = await db.from('landlord_accounts').upsert({
         client_id: 'll-' + slug,
@@ -146,7 +157,7 @@ export async function POST(req: NextRequest) {
         name: savedBuilding.name,
         address: savedBuilding.address,
         floors: savedBuilding.floors,
-        stalls: Math.max(totalRequested, currentStalls?.length ?? 0) + missing.length,
+        stalls: persistedTotal,
       },
       createdStalls: missing.length,
     });

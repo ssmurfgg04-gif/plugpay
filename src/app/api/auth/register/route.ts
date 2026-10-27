@@ -86,17 +86,50 @@ export async function POST(req: NextRequest) {
     }
 
     if (role === 'landlord') {
-      const name = businessName || ownerName || email.split('@')[0];
-      const { data: landlord, error: lErr } = await db
+      const name = (businessName || ownerName || email.split('@')[0]).slice(0, 80);
+      const { data: existingLandlord, error: lookupError } = await db
         .from('landlord_accounts')
-        .insert({
-          client_id: slugify('ll'),
-          name: name.slice(0, 80),
-          owner_email: email,
-        })
-        .select('id')
-        .single();
-      if (!lErr && landlord?.id) landlordId = landlord.id;
+        .select('id, owner_email')
+        .eq('name', name)
+        .maybeSingle();
+
+      if (lookupError) {
+        return NextResponse.json({ ok: false, error: 'Could not find your building account. Try again.' }, { status: 500 });
+      }
+
+      if (existingLandlord?.id) {
+        const assignedEmail = normalizeEmail(String(existingLandlord.owner_email ?? ''));
+        if (assignedEmail && assignedEmail !== email) {
+          return NextResponse.json(
+            { ok: false, error: 'That building account is assigned to a different email. Contact your agent or building administrator.' },
+            { status: 409 },
+          );
+        }
+        const { data: linkedLandlord, error: linkError } = await db
+          .from('landlord_accounts')
+          .update({ owner_email: email })
+          .eq('id', existingLandlord.id)
+          .select('id')
+          .single();
+        if (linkError || !linkedLandlord?.id) {
+          return NextResponse.json({ ok: false, error: 'Could not link your building account. Try again.' }, { status: 500 });
+        }
+        landlordId = linkedLandlord.id;
+      } else {
+        const { data: landlord, error: lErr } = await db
+          .from('landlord_accounts')
+          .insert({
+            client_id: slugify('ll'),
+            name,
+            owner_email: email,
+          })
+          .select('id')
+          .single();
+        if (lErr || !landlord?.id) {
+          return NextResponse.json({ ok: false, error: 'Could not create your landlord account. Try again.' }, { status: 500 });
+        }
+        landlordId = landlord.id;
+      }
     }
 
     const { data: user, error: uErr } = await db

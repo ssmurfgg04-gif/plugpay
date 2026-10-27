@@ -81,6 +81,9 @@ export async function POST(req: NextRequest) {
         .select(CLAIM_FIELDS).eq('token', token).maybeSingle();
       if (claimError) return NextResponse.json({ ok: false, error: 'Could not load claim' }, { status: 500 });
       if (!claim || claim.draft) return NextResponse.json({ ok: false, error: 'Claim link not found' }, { status: 404 });
+      const { data: building, error: buildingError } = await db.from('buildings')
+        .select('id, total_stalls').ilike('name', String(claim.building_name ?? '')).maybeSingle();
+      if (buildingError) return NextResponse.json({ ok: false, error: 'Could not load building details' }, { status: 500 });
       if (claim.status === 'CLAIMED') {
         return NextResponse.json({ ok: false, error: 'This claim link has already been used. Contact your agent if you need help.' }, { status: 409 });
       }
@@ -103,6 +106,7 @@ export async function POST(req: NextRequest) {
           whatsapp: claim.phone || null,
           category: claim.category || 'Other',
           building_name: claim.building_name || null,
+          building_id: building?.id ?? null,
           stall_label: claim.loc || null,
           ll_phone_verified: !!claim.verified,
           claimed: true,
@@ -115,6 +119,31 @@ export async function POST(req: NextRequest) {
           .eq('token', token).eq('status', 'CLAIMED');
         return NextResponse.json({ ok: false, error: 'Your seller profile could not be linked. Please try again.' }, { status: 500 });
       }
+
+      if (building?.id) {
+        const floorKey = String(claim.floor ?? 'G').replace(/^Floor\s*/i, '');
+        const floorName = floorKey === 'G' || floorKey === '0' ? 'Ground' : 'Floor ' + floorKey;
+        const stallPrefix = floorKey === 'G' || floorKey === '0' ? 'G' : floorKey;
+        const stallNumber = String(claim.number ?? '').replace(/\D/g, '');
+        if (stallNumber) {
+          const stallCode = stallPrefix + '-' + stallNumber.padStart(2, '0');
+          await db.from('stalls').update({
+            status: 'basic',
+            merchant_slug: session.merchantSlug,
+          }).eq('building_id', building.id).eq('floor', floorName).eq('code', stallCode);
+        }
+
+        const { count } = await db.from('merchants')
+          .select('id', { count: 'exact', head: true })
+          .eq('building_id', building.id);
+        const registered = Number(count ?? 0);
+        const total = Number(building.total_stalls ?? 0);
+        await db.from('buildings').update({
+          registered_merchants: registered,
+          coverage_pct: total > 0 ? Math.round((registered / total) * 100) : 0,
+        }).eq('id', building.id);
+      }
+
       return NextResponse.json({ ok: true, claim: toClientClaim({ ...claim, status: 'CLAIMED', claimed_at: now }) });
     }
 
@@ -139,11 +168,14 @@ export async function POST(req: NextRequest) {
     }
 
     const { data: existing, error: existingError } = await db.from('claims')
-      .select('token, created_by, building_name, business_name')
+      .select('token, created_by, building_name, business_name, status')
       .eq('token', token).maybeSingle();
     if (existingError) return NextResponse.json({ ok: false, error: 'Could not save claim' }, { status: 500 });
     if (existing && existing.created_by && existing.created_by !== session.userId) {
       return NextResponse.json({ ok: false, error: 'This claim belongs to another agent' }, { status: 409 });
+    }
+    if (existing?.status === 'CLAIMED') {
+      return NextResponse.json({ ok: false, error: 'This seller has already claimed their profile' }, { status: 409 });
     }
 
     const row = {

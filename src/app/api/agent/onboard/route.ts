@@ -61,11 +61,11 @@ export async function POST(req: NextRequest) {
   try {
     const db = supabase();
     const { data: existing, error: findError } = await db.from('buildings')
-      .select('id, source, created_by, registered_merchants')
+      .select('id, source, registered_merchants')
       .eq('slug', slug)
       .maybeSingle();
     if (findError) return NextResponse.json({ ok: false, error: 'Could not check the building directory' }, { status: 500 });
-    if (existing?.source === 'agent' && existing.created_by && existing.created_by !== session.userId) {
+    if (String(existing?.source ?? '').startsWith('agent:') && existing?.source !== 'agent:' + session.userId) {
       return NextResponse.json({ ok: false, error: 'This building is already managed by another agent' }, { status: 409 });
     }
 
@@ -78,17 +78,21 @@ export async function POST(req: NextRequest) {
       total_stalls: totalRequested,
       registered_merchants: Number(existing?.registered_merchants ?? 0),
       coverage_pct: 0,
-      source: 'agent',
+      source: 'agent:' + session.userId,
+    }, { onConflict: 'slug' }).select('id, slug, name, address, floors, total_stalls').single();
+    if (buildingError || !savedBuilding) {
+      return NextResponse.json({ ok: false, error: 'Could not save building details' }, { status: 500 });
+    }
+
+    // Optional metadata columns are introduced by migration 0008. Saving core
+    // building/stall inventory does not depend on that optional enhancement.
+    await db.from('buildings').update({
       maps_url: mapsUrl || null,
       category: category || null,
       landlord_name: landlordName || null,
       landlord_phone: landlordPhone || null,
       landlord_email: landlordEmail || null,
-      created_by: session.userId,
-    }, { onConflict: 'slug' }).select('id, slug, name, address, floors, total_stalls').single();
-    if (buildingError || !savedBuilding) {
-      return NextResponse.json({ ok: false, error: 'Could not save building details. Apply database migration 0008 if not already applied.' }, { status: 500 });
-    }
+    }).eq('id', savedBuilding.id);
 
     const { data: currentStalls, error: stallsError } = await db.from('stalls')
       .select('floor, code')

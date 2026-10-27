@@ -1252,28 +1252,87 @@ return true;
     (dir) => {
       const total = 4;
       if (obStep_ === total && dir > 0) {
-        if (obMerchantList.length === 0) {
-          showToast("Add at least one seller before publishing");
+        const buildingName = obBldgName.trim();
+        if (!buildingName) {
+          showToast("Enter the building name before publishing");
           return;
         }
-        const n = obMerchantList.length;
-        showToast(
-          `\u{1F389} Building published with ${n} seller${n === 1 ? "" : "s"} live on PlugPay! QR code sent to the manager and a claim link sent to each seller on WhatsApp.`,
-        );
-        claimsApiRef.current &&
-          claimsApiRef.current.publish(obMerchantList, obBldgName || "New building", obTotalStalls);
-        setAgentBuildings((b) => [
-          {
-            name: obBldgName || "New building",
-            street: "Nairobi CBD",
-            floorsCount: obFloorsCount,
-            stalls: obTotalStalls,
-            merchants: obMerchantList.length,
+        if (!obStreet.trim()) {
+          showToast("Enter the building street or location before publishing");
+          return;
+        }
+        if (!obLandlordName.trim() || (!obLandlordPhone.trim() && !obLandlordEmail.trim())) {
+          showToast("Add the landlord's name and at least a phone number or email");
+          return;
+        }
+        if (obMerchantList.length === 0) {
+          showToast("Register at least one seller before publishing");
+          return;
+        }
+
+        apiPost("/api/agent/onboard", {
+          building: {
+            name: buildingName,
+            address: obStreet.trim(),
+            mapsUrl: obMapsUrl.trim(),
+            category: obBuildingCategory,
+            landlordName: obLandlordName.trim(),
+            landlordPhone: obLandlordPhone.trim(),
+            landlordEmail: obLandlordEmail.trim(),
+            floors: parseInt(obFloorsCount, 10) || 0,
+            floorStalls: obFloorStalls,
           },
-          ...b,
-        ]);
-        closeModal("modal-onboard");
-        navigate("/agent/claims");
+        }).then((saved) => {
+          if (!saved || saved.ok !== true || !saved.building) {
+            showToast(saved?.error || "The building could not be saved. Check your connection and try again.");
+            return;
+          }
+          const n = obMerchantList.length;
+          const publish = claimsApiRef.current?.publish;
+          if (typeof publish !== "function") {
+            showToast("Building saved, but claim invitations could not be prepared. Retry Publish.");
+            return;
+          }
+          Promise.resolve(publish(obMerchantList, buildingName, obTotalStalls)).then((claimsSaved) => {
+            if (!claimsSaved) {
+              showToast("Building saved, but one or more seller invitations failed. Retry Publish to finish.");
+              return;
+            }
+
+            const b = saved.building;
+            const directoryRow = {
+              type: "building",
+              name: b.name,
+              street: b.address,
+              sub: b.address + " · " + b.floors + " floors · " + b.stalls + " stalls · 0 registered",
+              floors: b.floors,
+              stalls: b.stalls,
+              registered: 0,
+              pct: 0,
+            };
+            setBuildingDirectory((list) => [
+              directoryRow,
+              ...list.filter((item) => ppSlug(item.name) !== ppSlug(b.name)),
+            ]);
+            setAgentBuildings((list) => [
+              {
+                name: b.name,
+                street: b.address,
+                floorsCount: String(b.floors),
+                stalls: b.stalls,
+                merchants: 0,
+              },
+              ...list.filter((item) => ppSlug(item.name) !== ppSlug(b.name)),
+            ]);
+            showToast("Building saved. Seller claim links are ready; send each from Seller claim links.");
+            closeModal("modal-onboard");
+            navigate("/agent/claims");
+          }).catch(() => {
+            showToast("Building saved, but seller invitations could not be confirmed. Retry Publish.");
+          });
+        }).catch(() => {
+          showToast("The building could not be saved. Check your connection and try again.");
+        });
         return;
       }
       let next = obStep_ + dir;
@@ -1282,7 +1341,22 @@ return true;
       if (next < 1 || next > total) return;
       setObStep_(next);
     },
-    [closeModal, obBldgName, obFloorsCount, obMerchantList, obStep_, obTotalStalls, showToast],
+    [
+      closeModal,
+      obBldgName,
+      obStreet,
+      obMapsUrl,
+      obLandlordName,
+      obLandlordPhone,
+      obLandlordEmail,
+      obBuildingCategory,
+      obFloorStalls,
+      obFloorsCount,
+      obMerchantList,
+      obStep_,
+      obTotalStalls,
+      showToast,
+    ],
   );
   const obAddMerchant = useCallback(() => {
     if (!obNewBiz.trim()) {
@@ -1427,7 +1501,10 @@ return true;
   const stallLoc = (m) => (m.floor === "G" ? "Ground Floor" : "Floor " + m.floor) + ", Stall " + m.stallNum;
   const newAgentClaim = (m, bldg, extra) => ({
     id: m.id,
-    token: "clm" + m.id,
+    token: (agentClaims.find((claim) => claim.id === m.id) || {}).token ||
+      ("clm-" + (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID().replace(/-/g, "")
+        : Date.now().toString(36) + Math.random().toString(36).slice(2, 18))),
     businessName: m.biz,
     ownerName: m.ownerName,
     phone: m.phone,
@@ -1486,10 +1563,11 @@ return true;
       });
       return out;
     });
-    list.forEach((m) => {
-      apiPost("/api/claims", { claim: newAgentClaim(m, bldg) });
-    });
-    ensureLbAccount(bldg, "Nairobi CBD", stalls);
+    const saves = list.map((m) =>
+      apiPost("/api/claims", { claim: newAgentClaim(m, bldg) }),
+    );
+    ensureLbAccount(bldg, obStreet || "Nairobi CBD", stalls);
+    return Promise.all(saves).then((results) => results.every((result) => result && result.ok === true));
   };
   claimsApiRef.current = {
     upsert: upsertAgentClaim,

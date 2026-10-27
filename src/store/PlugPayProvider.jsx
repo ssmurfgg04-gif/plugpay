@@ -1475,9 +1475,18 @@ return true;
     openWhatsApp(c.phone, waClaimText(c));
     showToast(`Claim link resent to ${c.ownerName || c.businessName} on WhatsApp`);
   };
-  const openClaimSignIn = (token) => {
-    const c = agentClaims.filter((x) => x.token === token)[0];
-    if (!c) return;
+  const openClaimSignIn = (token, claimOverride) => {
+    const c = claimOverride || agentClaims.filter((x) => x.token === token)[0];
+    if (!c || c.status === "CLAIMED") return;
+
+    // The public claim URL is opened on the seller's own device, so hydrate
+    // the invitation locally before the authenticated signup flow completes.
+    setAgentClaims((list) => {
+      const exists = list.some((x) => x.token === token);
+      return exists
+        ? list.map((x) => (x.token === token ? { ...x, ...c } : x))
+        : [c, ...list];
+    });
     claimTokenRef.current = token;
     setClaimInfo({
       token,
@@ -1485,17 +1494,29 @@ return true;
       loc: c.loc,
       building: c.buildingName,
     });
-    setAuthStep("phone");
-    setAuthOtp("");
-    setAuthPinLoginValue("");
-    setAuthSetPinValue("");
-    setAuthMethodState("whatsapp");
-    setAuthPhone(c.phone || "");
+    setAuthStep("email");
+    setAuthRole("trader");
+    setAuthMode("register");
+    setAuthEmail("");
+    setAuthPassword("");
+    setAuthBusinessName(c.businessName || c.ownerName || "");
+    setAuthError("");
     openModal("modal-register");
   };
   const applyClaim = (token) => {
     const c = agentClaims.filter((x) => x.token === token)[0];
     if (!c) return;
+
+    // Persist the claim and attach its stall to the newly signed-in seller.
+    // Don't claim local drafts that were never published to the server.
+    if (!c.draft) {
+      apiPost("/api/claims", { action: "claimed", token }).then((result) => {
+        if (!result || result.ok !== true) {
+          showToast(result?.error || "Your claim could not be saved. Contact your agent before recording sales.");
+        }
+      });
+    }
+
     const same = sameNumber(c.phone, sellerProfile.phone);
     const loc = c.loc || "";
     setAgentClaims((l) =>

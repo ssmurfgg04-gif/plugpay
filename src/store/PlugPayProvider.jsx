@@ -76,6 +76,7 @@ export function PlugPayProvider({ children }) {
       .then((r) => r.json())
       .then((d) => {
         if (d && d.ok && Array.isArray(d.directorySellers)) setDirectory(d.directorySellers);
+        if (d && d.session?.role === "agent" && Array.isArray(d.agentBuildings)) setAgentBuildings(d.agentBuildings);
         if (d && d.ok && Array.isArray(d.directoryBuildings)) {
           const live = d.directoryBuildings;
           const names = new Set(live.map((b) => ppSlug(b.name)));
@@ -1793,6 +1794,7 @@ return true;
           .then((d) => {
             if (!d || !d.ok) return;
             if (Array.isArray(d.directorySellers)) setDirectory(d.directorySellers);
+            if (d.session?.role === "agent" && Array.isArray(d.agentBuildings)) setAgentBuildings(d.agentBuildings);
             if (Array.isArray(d.directoryBuildings)) {
               const live = d.directoryBuildings;
               const names = new Set(live.map((b) => ppSlug(b.name)));

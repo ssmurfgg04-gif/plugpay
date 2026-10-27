@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
     if (!token || !businessName || !ownerName || !phone || !buildingName || !loc) {
       return NextResponse.json({ ok: false, error: 'Seller name, owner, phone, building and stall are required' }, { status: 400 });
     }
-    if (!/^(?:0\\d{9}|\\+?254\\d{9})$/.test(phone.replace(/[\\s()-]/g, ''))) {
+    if (!/^(?:0\d{9}|\+?254\d{9})$/.test(phone.replace(/[\s()-]/g, ''))) {
       return NextResponse.json({ ok: false, error: 'Enter a valid Kenyan seller phone number' }, { status: 400 });
     }
 

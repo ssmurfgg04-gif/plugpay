@@ -35,8 +35,8 @@ export function ReceiptModal() {
         <div className="rm-title">{isInv ? "Invoice ready to share" : "Receipt ready to share"}</div>
         <div className="rm-sub">
           {isInv
-            ? "Payment link delivered \u00b7 add the M-Pesa code once it's paid"
-            : "Sale recorded \u00b7 Review link attached \u00b7 Stock updated"}
+            ? "Payment request prepared · add the M-Pesa code once paid"
+            : "Sale recorded · receipt PNG prepared · review link included in the message"}
         </div>
       </div>
       <div className="rm-body">
@@ -73,7 +73,7 @@ export function ReceiptModal() {
             >
               {isInv
                 ? "Not counted as a sale until it is paid and a receipt is sent"
-                : "Review link is open for 6 hours \u00b7 one review per receipt"}
+                : "Choose WhatsApp and the buyer\'s chat to send the PNG and summary"}
             </div>
           </div>
         </div>

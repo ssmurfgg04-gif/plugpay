@@ -79,7 +79,7 @@ export async function GET() {
 
     // ---- Public directory (same for everyone) -------------------------------
     const [bRes, mRes] = await Promise.all([
-      db.from('buildings').select('id, slug, name, address, area, floors, total_stalls, registered_merchants, coverage_pct, maps_url, category, landlord_name, landlord_phone, landlord_email, created_by'),
+      db.from('buildings').select('id, slug, name, address, area, floors, total_stalls, registered_merchants, coverage_pct'),
       db.from('merchants').select('id, slug, business_name, owner_name, category, building_name, stall_label, verified, trust_score, sales_count, rating_avg, rating_count, vouches_received, avatar_url, bio, about, street, phone, whatsapp, instagram, tiktok, facebook, established_year'),
     ]);
 
@@ -132,8 +132,8 @@ export async function GET() {
     let agentBuildings: Record<string, unknown>[] = [];
     if (session?.role === 'agent') {
       const { data: agentBuildingRows } = await db.from('buildings')
-        .select('id, slug, name, address, floors, total_stalls, registered_merchants')
-        .eq('created_by', session.userId)
+        .select('id, slug, name, address, floors, total_stalls, registered_merchants, source')
+        .eq('source', 'agent:' + session.userId)
         .order('created_at', { ascending: false });
       agentBuildings = (agentBuildingRows ?? []).map((b: Record<string, unknown>) => ({
         id: String(b.id ?? ''),

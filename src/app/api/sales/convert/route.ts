@@ -39,16 +39,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'M-Pesa code already recorded' }, { status: 200 });
   }
 
-  const seq = await supabase().from('receipts').select('receipt_no').limit(500);
-  const maxNo = (seq.data ?? []).reduce((m: number, r: { receipt_no: string | null }) => {
-    const n = Number(String(r.receipt_no ?? '').replace(/\D/g, '')) || 0;
-    return Math.max(m, n);
-  }, 0);
-  const receipt_no = '#' + String(maxNo + 1).padStart(5, '0');
-
-  const { error } = await supabase().from('receipts').insert({
+  const { data: inserted, error } = await supabase().from('receipts').insert({
     merchant_id: merchant.id,
-    receipt_no,
     buyer_name: inv.buyer_name,
     buyer_phone: inv.buyer_phone,
     items: inv.items,
@@ -57,8 +49,10 @@ export async function POST(req: NextRequest) {
     delivery: 'pickup',
     status: 'settled',
     demo: !!inv.demo,
-  });
+  }).select('receipt_no').single();
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 200 });
+
+  const receipt_no = inserted?.receipt_no ?? '';
 
   await supabase()
     .from('invoices')

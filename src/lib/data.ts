@@ -103,24 +103,27 @@ export async function createReceipt(input: {
     return { error: 'This M-Pesa code has already been recorded.' };
   }
 
-  const seq = await supabase().from('receipts').select('receipt_no').limit(500);
-  const maxNo = (seq.data ?? []).reduce((m: number, r: { receipt_no: string | null }) => {
-    const n = Number(String(r.receipt_no ?? '').replace(/\D/g, '')) || 0;
-    return Math.max(m, n);
-  }, 0);
-  const receipt_no = '#' + String(maxNo + 1).padStart(5, '0');
-
-  const { error } = await supabase().from('receipts').insert({
-    merchant_id: input.merchant_id,
-    receipt_no,
-    buyer_name: input.buyer_name,
-    buyer_phone: input.buyer_phone,
-    items: input.items,
-    total_kes: input.total_kes,
-    mpesa_code: input.mpesa_code,
-    delivery: input.delivery,
-    status: 'settled',
-  });
-  if (error) return { error: error.message };
-  return { receipt_no };
+  // receipt_no is assigned atomically by the receipts_set_no DB trigger
+  // (backed by receipts_no_seq) to avoid collisions under concurrent inserts.
+  const { data: inserted, error } = await supabase()
+    .from('receipts')
+    .insert({
+      merchant_id: input.merchant_id,
+      buyer_name: input.buyer_name,
+      buyer_phone: input.buyer_phone,
+      items: input.items,
+      total_kes: input.total_kes,
+      mpesa_code: input.mpesa_code,
+      delivery: input.delivery,
+      status: 'settled',
+    })
+    .select('receipt_no')
+    .single();
+  if (error) {
+    if (/unique/i.test(error.message) && /mpesa/i.test(error.message)) {
+      return { error: 'This M-Pesa code has already been recorded.' };
+    }
+    return { error: error.message };
+  }
+  return { receipt_no: inserted?.receipt_no ?? '' };
 }

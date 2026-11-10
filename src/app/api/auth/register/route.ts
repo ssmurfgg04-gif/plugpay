@@ -16,7 +16,7 @@ import {
   SESSION_COOKIE,
 } from '@/lib/session';
 
-const ROLES: PortalRole[] = ['trader', 'landlord', 'agent'];
+const ROLES: PortalRole[] = ['trader', 'landlord', 'agent', 'admin'];
 
 function slugify(prefix: string): string {
   const rand = Math.random().toString(36).slice(2, 8);
@@ -36,6 +36,13 @@ export async function POST(req: NextRequest) {
   }
   if (password.length < 8) {
     return NextResponse.json({ ok: false, error: 'Password must be at least 8 characters' }, { status: 400 });
+  }
+  if (role === 'admin') {
+    const adminCode = String(body?.adminCode ?? '').trim();
+    const expected = process.env.ADMIN_CODE || 'plugpay-admin-dev';
+    if (!adminCode || adminCode !== expected) {
+      return NextResponse.json({ ok: false, error: 'Invalid admin code' }, { status: 403 });
+    }
   }
 
   const { hasSupabase, supabase } = await import('@/lib/supabase');

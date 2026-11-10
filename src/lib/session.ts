@@ -14,7 +14,7 @@ const SECRET =
   (process.env.NODE_ENV === 'production' ? '' : 'plugpay-local-development-only-change-me');
 
 export const SESSION_COOKIE = 'pp_session';
-export type PortalRole = 'trader' | 'landlord' | 'agent';
+export type PortalRole = 'trader' | 'landlord' | 'agent' | 'admin';
 
 export interface SessionPayload {
   userId: string;
@@ -46,7 +46,7 @@ export function parseSession(token: string | undefined): SessionPayload | null {
   }
   try {
     const raw = JSON.parse(Buffer.from(body, 'base64url').toString()) as Partial<SessionPayload>;
-    const roles: PortalRole[] = ['trader', 'landlord', 'agent'];
+    const roles: PortalRole[] = ['trader', 'landlord', 'agent', 'admin'];
     if (!raw.userId || !raw.email || !roles.includes(raw.role as PortalRole)) return null;
     return {
       userId: String(raw.userId),
@@ -98,7 +98,7 @@ export function verifyPassword(password: string, stored: string | null | undefin
   return candidate.length === expected.length && crypto.timingSafeEqual(candidate, expected);
 }
 
-export const EMAIL_RE = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$/;
+export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export function normalizeEmail(email: string): string {
   return String(email || '').trim().toLowerCase();

@@ -72,6 +72,25 @@ export async function GET() {
   }
 }
 
+export async function POST(req: NextRequest) {
+  if (!hasSupabase) return NextResponse.json({ ok: false, error: 'Database not configured' }, { status: 503 });
+  const session = await getSession();
+  if (!session || session.role !== 'admin') {
+    return NextResponse.json({ ok: false, error: 'Admin access required' }, { status: 403 });
+  }
+  const body = await req.json().catch(() => null);
+  const action = String(body?.action ?? '');
+  const buildingId = String(body?.buildingId ?? '').trim();
+  if (action === 'verifyBuilding' || action === 'revokeBuilding') {
+    if (!buildingId) return NextResponse.json({ ok: false, error: 'buildingId required' }, { status: 400 });
+    const verified = action === 'verifyBuilding';
+    const { error } = await supabase().from('buildings').update({ verified }).eq('id', buildingId);
+    if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true, verified });
+  }
+  return NextResponse.json({ ok: false, error: 'Unknown action' }, { status: 400 });
+}
+
 export async function DELETE(req: NextRequest) {
   if (!hasSupabase) return NextResponse.json({ ok: false, error: 'Database not configured' }, { status: 503 });
   const session = await getSession();

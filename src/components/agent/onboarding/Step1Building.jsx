@@ -8,17 +8,16 @@ export function Step1Building({ active = true }) {
     setObBldgName,
     obFloorsCount,
     setObFloorsCount,
+    obBasementsCount,
+    setObBasementsCount,
     obFloorStalls,
     setObFloorStall,
     obTotalStalls,
   } = usePlugPay();
   const n = Math.min(30, Math.max(0, parseInt(obFloorsCount) || 0));
-  const floorKeys = Array.from(
-    {
-      length: n,
-    },
-    (_, i) => (i === 0 ? "G" : String(i)),
-  );
+  const b = Math.min(10, Math.max(0, parseInt(obBasementsCount) || 0));
+  const basementKeys = Array.from({ length: b }, (_, i) => (i === 0 ? "B" : "B" + i));
+  const floorKeys = [...basementKeys, ...Array.from({ length: n }, (_, i) => (i === 0 ? "G" : String(i)))];
   return (
     <div className={`ob-step${active ? " active" : ""}`}>
       <div className="ob-step-label">{"Step 1 of 2 \xB7 Building Info"}</div>
@@ -87,6 +86,18 @@ export function Step1Building({ active = true }) {
           onChange={(e) => setObFloorsCount(e.target.value)}
         />
       </div>
+      <div className="ob-field">
+        <label className="ob-label">Number of Basement Levels</label>
+        <input
+          className="ob-input"
+          type="number"
+          placeholder="e.g. 2"
+          min={0}
+          max={10}
+          value={obBasementsCount}
+          onChange={(e) => setObBasementsCount(e.target.value)}
+        />
+      </div>
       {floorKeys.length > 0 && (
         <div
           style={{
@@ -120,7 +131,13 @@ export function Step1Building({ active = true }) {
                     color: "var(--ink)",
                   }}
                 >
-                  {k === "G" ? "Ground Floor" : `Floor ${k}`}
+                  {k === "G"
+                    ? "Ground Floor"
+                    : k === "B"
+                      ? "Basement"
+                      : /^B\d+$/.test(k)
+                        ? `Basement ${k.slice(1)}`
+                        : `Floor ${k}`}
                 </span>
                 <input
                   type="number"

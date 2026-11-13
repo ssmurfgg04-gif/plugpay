@@ -924,6 +924,14 @@ export function PlugPayProvider({ children }) {
         createdAt: now,
       };
       setInvoicesList((l) => [inv, ...l]);
+      apiPost("/api/invoices", {
+        token,
+        buyerName: rsName,
+        buyerPhone: rsPhone,
+        source: "WhatsApp",
+        items: clean,
+        total,
+      });
       shareSalesDocument({
         kind: "invoice",
         seller: sellerProfile,
@@ -1155,6 +1163,7 @@ return true;
   const [obStep_, setObStep_] = useState(1);
   const [obBldgName, setObBldgName] = useState("");
   const [obFloorsCount, setObFloorsCount] = useState("6");
+  const [obBasementsCount, setObBasementsCount] = useState("0");
   const [obFloorStalls, setObFloorStallsState] = useState({});
   const [obPayMethod, setObPayMethod] = useState("till");
   const [obMerchantList, setObMerchantList] = useState([]);
@@ -2053,6 +2062,8 @@ return true;
     setObBldgName,
     obFloorsCount,
     setObFloorsCount,
+    obBasementsCount,
+    setObBasementsCount,
     obFloorStalls,
     setObFloorStall,
     obTotalStalls,

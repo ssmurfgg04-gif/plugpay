@@ -16,7 +16,9 @@ export function ObReview() {
             {(pp.obBldgName || "\u2014") +
               " \u00b7 " +
               (pp.obFloorsCount || "\u2014") +
-              " floors \u00b7 " +
+              " floors" +
+              (parseInt(pp.obBasementsCount) > 0 ? " + " + pp.obBasementsCount + " basement(s)" : "") +
+              " \u00b7 " +
               pp.obTotalStalls +
               " stalls"}
           </span>

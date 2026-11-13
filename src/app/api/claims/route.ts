@@ -84,6 +84,9 @@ export async function POST(req: NextRequest) {
       if (claim.status === 'CLAIMED') {
         return NextResponse.json({ ok: false, error: 'This claim link has already been used. Contact your agent if you need help.' }, { status: 409 });
       }
+      if (claim.expires_at && new Date(claim.expires_at).getTime() < Date.now()) {
+        return NextResponse.json({ ok: false, error: 'This claim link has expired. Contact your agent for a new link.' }, { status: 410 });
+      }
 
       // Reserve the one-time claim before changing the seller record. The
       // conditional update prevents two accounts claiming the same invite.
@@ -165,6 +168,7 @@ export async function POST(req: NextRequest) {
       sent_at: c.sentAt && Number.isFinite(new Date(String(c.sentAt)).getTime())
         ? new Date(String(c.sentAt)).toISOString()
         : new Date().toISOString(),
+      expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
       claimed_at: null,
     };
 

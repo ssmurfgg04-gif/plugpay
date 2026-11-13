@@ -12,7 +12,10 @@ export function initials(name) {
 }
 
 export function floorLabel(floorKey) {
-  return floorKey === "G" ? "Ground" : `Floor ${floorKey}`;
+  if (floorKey === "G") return "Ground";
+  if (floorKey === "B") return "Basement";
+  if (/^B\d+$/.test(String(floorKey))) return "Basement " + String(floorKey).slice(1);
+  return `Floor ${floorKey}`;
 }
 
 export function appBase() {

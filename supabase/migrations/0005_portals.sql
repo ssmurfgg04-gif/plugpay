@@ -100,6 +100,7 @@ create table if not exists stall_history (
 
 -- ============ BUILDINGS: floors + provenance ============
 alter table buildings add column if not exists floors int;
+alter table buildings add column if not exists basements int default 0;
 alter table buildings add column if not exists source text default 'directory';
 
 create index if not exists invoices_merchant_idx on invoices(merchant_id);

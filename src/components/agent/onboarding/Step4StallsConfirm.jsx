@@ -34,17 +34,13 @@ export function Step4StallsConfirm({ active = true }) {
     obNewType,
     setObNewType,
     obGoToStep,
+    obBasementsCount,
   } = usePlugPay();
   const n = Math.min(30, Math.max(0, parseInt(obFloorsCount) || 0));
-  const floorKeys =
-    n > 0
-      ? Array.from(
-          {
-            length: n,
-          },
-          (_, i) => (i === 0 ? "G" : String(i)),
-        )
-      : FALLBACK_FLOOR_KEYS;
+  const b = Math.min(10, Math.max(0, parseInt(obBasementsCount) || 0));
+  const basementKeys = Array.from({ length: b }, (_, i) => (i === 0 ? "B" : "B" + i));
+  const aboveKeys = n > 0 ? Array.from({ length: n }, (_, i) => (i === 0 ? "G" : String(i))) : FALLBACK_FLOOR_KEYS;
+  const floorKeys = b > 0 ? [...basementKeys, ...aboveKeys] : aboveKeys;
   const [gridFloor, setGridFloor] = useState((_a = floorKeys[0]) != null ? _a : "G");
   const [action, setAction] = useState(null);
   const safeGridFloor = floorKeys.includes(gridFloor) ? gridFloor : floorKeys[0];

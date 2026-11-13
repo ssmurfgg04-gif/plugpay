@@ -11,6 +11,7 @@ import { DocTrader } from "@/components/seller/sales/DocTrader";
 import { DocBadges } from "@/components/seller/sales/DocBadges";
 import { DocPayInfo } from "@/components/seller/sales/DocPayInfo";
 import { DocItems } from "@/components/seller/sales/DocItems";
+import { downloadReceiptPdf } from "@/lib/receipt-pdf";
 import { InvoiceConvertBox } from "@/components/seller/sales/InvoiceConvertBox";
 
 export function SellerInvoiceDetailPage(props) {
@@ -92,6 +93,27 @@ export function SellerInvoiceDetailPage(props) {
           <div className="doc-total-row">
             <span>{paid ? "Total paid" : "Total due"}</span>
             <strong>{"KSh " + Number(inv.total || 0).toLocaleString()}</strong>
+          </div>
+          <div style={{ padding: "12px 16px" }}>
+            <button
+              onClick={() =>
+                downloadReceiptPdf({
+                  kind: "invoice",
+                  code: inv.token,
+                  number: inv.number || inv.token,
+                  buyerName: inv.buyerName,
+                  buyerPhone: inv.buyerPhone,
+                  items: inv.items,
+                  total: inv.total,
+                  createdAt: inv.createdAt,
+                  businessName: sp?.bizName || sp?.businessName,
+                  ownerName: sp?.ownerName,
+                })
+              }
+              style={{ padding: "8px 14px", borderRadius: 6, background: "#1a1a2e", color: "#fff", border: "none", cursor: "pointer", fontSize: 13 }}
+            >
+              Download PDF
+            </button>
           </div>
           {!paid && (
             <div

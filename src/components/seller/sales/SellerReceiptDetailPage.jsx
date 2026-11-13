@@ -12,6 +12,7 @@ import { DocTrader } from "@/components/seller/sales/DocTrader";
 import { DocBadges } from "@/components/seller/sales/DocBadges";
 import { DocItems } from "@/components/seller/sales/DocItems";
 import { ReviewChip } from "@/components/seller/sales/ReviewChip";
+import { downloadReceiptPdf } from "@/lib/receipt-pdf";
 
 export function SellerReceiptDetailPage(props) {
   var pp = usePlugPay();
@@ -80,6 +81,27 @@ export function SellerReceiptDetailPage(props) {
           <div className="doc-total-row">
             <span>Total paid</span>
             <strong>{"KSh " + sale.total.toLocaleString()}</strong>
+          </div>
+          <div style={{ padding: "12px 16px" }}>
+            <button
+              onClick={() =>
+                downloadReceiptPdf({
+                  kind: "receipt",
+                  code: sale.code,
+                  buyerName: sale.buyerName,
+                  buyerPhone: sale.buyerPhone,
+                  items: sale.items,
+                  total: sale.total,
+                  paymentRef: sale.paymentRef,
+                  createdAt: sale.createdAt,
+                  businessName: sp?.bizName || sp?.businessName,
+                  ownerName: sp?.ownerName,
+                })
+              }
+              style={{ padding: "8px 14px", borderRadius: 6, background: "#1a1a2e", color: "#fff", border: "none", cursor: "pointer", fontSize: 13 }}
+            >
+              Download PDF
+            </button>
           </div>
           <div className="doc-sec">
             <div className="doc-sec-h">{Ic("star", 13)}Buyer review</div>

@@ -11,7 +11,6 @@ import { DocTrader } from "@/components/seller/sales/DocTrader";
 import { DocBadges } from "@/components/seller/sales/DocBadges";
 import { DocPayInfo } from "@/components/seller/sales/DocPayInfo";
 import { DocItems } from "@/components/seller/sales/DocItems";
-import { downloadReceiptPdf } from "@/lib/receipt-pdf";
 import { InvoiceConvertBox } from "@/components/seller/sales/InvoiceConvertBox";
 
 export function SellerInvoiceDetailPage(props) {
@@ -96,7 +95,8 @@ export function SellerInvoiceDetailPage(props) {
           </div>
           <div style={{ padding: "12px 16px" }}>
             <button
-              onClick={() =>
+              onClick={async () => {
+                const { downloadReceiptPdf } = await import("@/lib/receipt-pdf");
                 downloadReceiptPdf({
                   kind: "invoice",
                   code: inv.token,
@@ -108,8 +108,8 @@ export function SellerInvoiceDetailPage(props) {
                   createdAt: inv.createdAt,
                   businessName: sp?.bizName || sp?.businessName,
                   ownerName: sp?.ownerName,
-                })
-              }
+                });
+              }}
               style={{ padding: "8px 14px", borderRadius: 6, background: "#1a1a2e", color: "#fff", border: "none", cursor: "pointer", fontSize: 13 }}
             >
               Download PDF

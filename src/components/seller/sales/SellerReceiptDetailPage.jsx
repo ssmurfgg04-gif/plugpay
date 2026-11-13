@@ -12,7 +12,6 @@ import { DocTrader } from "@/components/seller/sales/DocTrader";
 import { DocBadges } from "@/components/seller/sales/DocBadges";
 import { DocItems } from "@/components/seller/sales/DocItems";
 import { ReviewChip } from "@/components/seller/sales/ReviewChip";
-import { downloadReceiptPdf } from "@/lib/receipt-pdf";
 
 export function SellerReceiptDetailPage(props) {
   var pp = usePlugPay();
@@ -84,7 +83,8 @@ export function SellerReceiptDetailPage(props) {
           </div>
           <div style={{ padding: "12px 16px" }}>
             <button
-              onClick={() =>
+              onClick={async () => {
+                const { downloadReceiptPdf } = await import("@/lib/receipt-pdf");
                 downloadReceiptPdf({
                   kind: "receipt",
                   code: sale.code,
@@ -96,8 +96,8 @@ export function SellerReceiptDetailPage(props) {
                   createdAt: sale.createdAt,
                   businessName: sp?.bizName || sp?.businessName,
                   ownerName: sp?.ownerName,
-                })
-              }
+                });
+              }}
               style={{ padding: "8px 14px", borderRadius: 6, background: "#1a1a2e", color: "#fff", border: "none", cursor: "pointer", fontSize: 13 }}
             >
               Download PDF

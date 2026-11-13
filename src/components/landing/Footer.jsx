@@ -98,15 +98,7 @@ export function Footer() {
           >
             Terms of service
           </a>
-          <a
-            href="#"
-            onClick={(e) => {
-              e.preventDefault();
-              showToast("Opening WhatsApp\u2026");
-            }}
-          >
-            Contact us
-          </a>
+          <a href="mailto:hello@plugpay.co.ke">hello@plugpay.co.ke</a>
         </div>
       </div>
       <div className="wrap footer-bottom">

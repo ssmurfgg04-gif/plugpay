@@ -459,26 +459,8 @@ export function PlugPayProvider({ children }) {
   const [sessionInfo, setSessionInfo] = useState(null);
   const authGoBack = useCallback(() => setAuthStep("email"), []);
   const [docStatus, setDocStatus] = useState({});
-  const fakeUpload = useCallback(
-    (key, name) => {
-      if (docStatus[key] === "done") {
-        showToast(`${name} already uploaded \u2713`);
-        return;
-      }
-      setDocStatus((s) => ({
-        ...s,
-        [key]: "uploading",
-      }));
-      setTimeout(() => {
-        setDocStatus((s) => ({
-          ...s,
-          [key]: "done",
-        }));
-        showToast(`${name} uploaded successfully \u2713`);
-      }, 1200);
-    },
-    [docStatus, showToast],
-  );
+  // Real document upload is handled by SellerProfileCompliance via /api/upload.
+  // docStatus is exposed for that component; the fake upload stub was removed.
   const [showVacateForm, setShowVacateForm] = useState(false);
   const [vacateBuilding, setVacateBuilding] = useState("");
   const [vacateStall, setVacateStall] = useState("");
@@ -2018,7 +2000,7 @@ return true;
     sessionInfo,
     authGoBack,
     docStatus,
-    fakeUpload,
+    setDocStatus,
     vacateBuilding,
     setVacateBuilding,
     vacateStall,

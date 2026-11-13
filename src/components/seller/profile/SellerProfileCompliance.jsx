@@ -1,87 +1,90 @@
 "use client";
 
+import { useRef } from "react";
 import { useSellerProfileForm } from "@/lib/seller";
 
-/* ---- Profile tab ---- */
-/* ---- Profile tab ---- */
 var docFields = [
-  {
-    key: "idfront",
-    name: "ID Front",
-    icon: "\u{1FAAA}",
-  },
-  {
-    key: "idback",
-    name: "ID Back",
-    icon: "\u{1FAAA}",
-  },
-  {
-    key: "selfie",
-    name: "Selfie",
-    icon: "\u{1F933}",
-  },
-  {
-    key: "biz",
-    name: "Business License",
-    icon: "\u{1F4C4}",
-  },
-  {
-    key: "kra",
-    name: "KRA PIN Certificate",
-    icon: "\u{1F9FE}",
-  },
+  { key: "idfront", name: "ID Front", icon: "\u{1FAAA}" },
+  { key: "idback", name: "ID Back", icon: "\u{1FAAA}" },
+  { key: "selfie", name: "Selfie", icon: "\u{1F933}" },
+  { key: "biz", name: "Business License", icon: "\u{1F4C4}" },
+  { key: "kra", name: "KRA PIN Certificate", icon: "\u{1F9FE}" },
 ];
 
 export function SellerProfileCompliance() {
   var f = useSellerProfileForm(),
-    pp = f.pp,
-    sp = f.sp,
-    S = f.S,
-    pm = f.pm,
-    PMETHODS = f.PMETHODS,
-    noAcct = f.noAcct,
-    YEARS = f.YEARS;
-  return (
-    <div
-      className="tp-card"
-      style={{
-        padding: 13,
-      }}
-    >
-      <div className="tp-section-title">Compliance Documents</div>
-      <div
-        className="tp-section-body"
-        style={{
-          marginBottom: 10,
-        }}
-      >
-        {
-          "Kept on file for your own records \u2014 your landlord doesn\u2019t review these. Your Landlord Verified badge comes from your landlord confirming you occupy your stall."
+    pp = f.pp;
+  var inputsRef = useRef({});
+
+  var handleUpload = function (docKey, name, file) {
+    if (!file) return;
+    pp.setDocStatus(function (s) {
+      return Object.assign({}, s, { [docKey]: "uploading" });
+    });
+    var formData = new FormData();
+    formData.append("file", file);
+    formData.append("docKey", docKey);
+    fetch("/api/upload", { method: "POST", body: formData })
+      .then(function (r) {
+        return r.json();
+      })
+      .then(function (res) {
+        if (!res || res.ok === false) {
+          pp.setDocStatus(function (s) {
+            return Object.assign({}, s, { [docKey]: "idle" });
+          });
+          pp.showToast("Upload failed: " + ((res && res.error) || "Unknown error"), "error");
+          return;
         }
+        pp.setDocStatus(function (s) {
+          return Object.assign({}, s, { [docKey]: "done" });
+        });
+        pp.showToast(name + " uploaded successfully ✓");
+      })
+      .catch(function () {
+        pp.setDocStatus(function (s) {
+          return Object.assign({}, s, { [docKey]: "idle" });
+        });
+        pp.showToast("Upload failed — please try again", "error");
+      });
+  };
+
+  return (
+    <div className="tp-card" style={{ padding: 13 }}>
+      <div className="tp-section-title">Compliance Documents</div>
+      <div className="tp-section-body" style={{ marginBottom: 10 }}>
+        Kept on file for your own records — your landlord doesn’t review these. Your Landlord Verified badge comes from your landlord confirming you occupy your stall.
       </div>
-      {docFields.map(function (d, i) {
+      {docFields.map(function (d) {
         var st = pp.docStatus[d.key];
         return (
           <div key={d.key} className="sp-doc-row">
-            <div
-              style={{
-                flex: 1,
-              }}
-            >
+            <div style={{ flex: 1 }}>
               <div className="tp-doc-label">{(d.icon || "") + " " + d.name}</div>
-              <div
-                className="tp-doc-badge"
-                style={{
-                  marginTop: 4,
-                }}
-              >
-                {st === "done" ? "\u2713 Uploaded" : st === "uploading" ? "Uploading\u2026" : "Not uploaded"}
+              <div className="tp-doc-badge" style={{ marginTop: 4 }}>
+                {st === "done" ? "✓ Uploaded" : st === "uploading" ? "Uploading…" : "Not uploaded"}
               </div>
             </div>
+            <input
+              type="file"
+              accept="image/jpeg,image/png,application/pdf"
+              style={{ display: "none" }}
+              ref={function (el) {
+                inputsRef.current[d.key] = el;
+              }}
+              onChange={function (e) {
+                var file = e.target.files && e.target.files[0];
+                handleUpload(d.key, d.name, file);
+                e.target.value = "";
+              }}
+            />
             <button
               className="sp-edit-btn"
+              type="button"
+              disabled={st === "uploading"}
               onClick={function () {
-                pp.fakeUpload(d.key, d.name);
+                var input = inputsRef.current[d.key];
+                if (input) input.click();
               }}
             >
               {st === "done" ? "Replace" : "Upload"}

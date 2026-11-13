@@ -4,7 +4,7 @@ import { usePlugPay } from "@/store/context";
 import { LOGO_DATA_URI } from "@/lib/assets";
 
 export function Footer() {
-  const { doSearch, openAuthModal, openMerchantModal, openModal, showToast } = usePlugPay();
+  const { doSearch, openAuthModal, openMerchantModal, openModal } = usePlugPay();
   return (
     <footer>
       <div className="wrap footer-grid">
@@ -67,37 +67,13 @@ export function Footer() {
           >
             POS demo
           </a>
-          <a
-            href="#"
-            onClick={(e) => {
-              e.preventDefault();
-              showToast("Seller guide coming soon");
-            }}
-          >
-            Seller guide
-          </a>
+          <a href="/seller-guide">Seller guide</a>
         </div>
         <div className="footer-col">
           <div className="footer-col-h">Company</div>
           <a href="#friction">Our story</a>
-          <a
-            href="#"
-            onClick={(e) => {
-              e.preventDefault();
-              showToast("Privacy policy coming soon");
-            }}
-          >
-            Privacy policy
-          </a>
-          <a
-            href="#"
-            onClick={(e) => {
-              e.preventDefault();
-              showToast("Terms of service coming soon");
-            }}
-          >
-            Terms of service
-          </a>
+          <a href="/privacy-policy">Privacy policy</a>
+          <a href="/terms-of-service">Terms of service</a>
           <a href="mailto:hello@plugpay.co.ke">hello@plugpay.co.ke</a>
         </div>
       </div>

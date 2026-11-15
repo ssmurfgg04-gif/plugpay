@@ -39,6 +39,12 @@ jobs:
           node-version: 22
           cache: npm
 
+      # wrangler auto-detects the OpenNext project and delegates the upload
+      # to `opennextjs-cloudflare deploy`, which invokes bun when it finds
+      # bun.lock. Install bun so the deploy step survives that delegation.
+      - uses: oven-sh/setup-bun@v2
+        if: steps.creds.outputs.ok == 'true'
+
       - name: Install dependencies
         if: steps.creds.outputs.ok == 'true'
         run: npm ci

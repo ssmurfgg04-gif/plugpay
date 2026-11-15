@@ -86,3 +86,9 @@ scripts/source_products_avatars.py
 scripts/source_round2.py
 scripts/make_sheets.py
 scripts/finalize_images.py
+
+# OpenNext / Wrangler build output
+/.open-next/
+/.wrangler/
+.env.local
+.dev.vars

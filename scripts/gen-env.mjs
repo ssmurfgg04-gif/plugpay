@@ -1,7 +1,7 @@
-// Build-time env baker for Netlify.
+// Build-time env baker (Cloudflare Workers deploy / local dev).
 //
-// netlify.toml [build.environment] variables are available during the build
-// but NOT at function runtime. This prebuild step writes the server-only
+// Host build env (GitHub Actions env for the Cloudflare Workers deploy) is
+// available during the build but NOT at runtime. This prebuild step writes the server-only
 // values (Supabase service key, session secret) into a generated module that
 // the Next.js bundler then ships inside the server functions.
 //
@@ -9,9 +9,9 @@
 // Real values never live in source files — only here, transiently, from the
 // build environment. Local development uses .env.local instead (gitignored).
 //
-// To move the secrets fully off the repo later: set them in the Netlify UI
-// (Site settings → Environment variables), delete the values from
-// netlify.toml, and redeploy. Nothing else changes.
+// Secrets never live in the repo: they come from GitHub Actions secrets or
+// a developer's .env.local. The Cloudflare deploy workflow bakes them into
+// the worker bundle; rotating = update the secret and re-push.
 
 import { writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -47,7 +47,7 @@ const session = process.env.SESSION_SECRET || current.session;
 
 const out = `// GENERATED at build time by scripts/gen-env.mjs — do not edit by hand.
 // The committed version contains empty placeholders. Real values are injected
-// from the build environment (Netlify [build.environment] or .env.local) and
+// from the build environment (GitHub Actions env / .env.local) and
 // only ever exist inside the server bundle, never in client code.
 export const GEN_SUPABASE_URL = '${esc(url)}';
 export const GEN_SUPABASE_SERVICE_KEY = '${esc(service)}';

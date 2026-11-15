@@ -26,7 +26,7 @@ jobs:
       - name: Production build
         env:
           # Build with the real environment so the build exercises the live
-          # Supabase path (the same values Netlify bakes in via netlify.toml).
+          # Supabase path (the same values the Cloudflare Workers deploy bakes in).
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

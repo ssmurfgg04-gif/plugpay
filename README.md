@@ -43,7 +43,7 @@ WhatsApp chat into a storefront buyers can actually trust.
 - Supabase (Postgres) with SQL migrations in `supabase/migrations/`
 - Demo sessions via HMAC-signed cookies (`src/lib/session.ts`)
 - Graceful fallback: with no env vars the site renders bundled seed data, so
-  Netlify builds never break; set env vars for live data.
+  CI/deploy builds never break; set env vars for live data.
 
 ## Run locally
 
@@ -80,21 +80,29 @@ UI: register → clean dashboard → sign out → sign back in.
 
 ## Deploy
 
-Two supported paths:
+The live site (https://plugpay.co.ke) is a **Cloudflare Workers** deployment
+built with OpenNext for Cloudflare.
 
-1. **Netlify (current live site: https://plugnply.netlify.app).** Build command
-   `npm run build`, the Netlify Next.js plugin is wired in `netlify.toml`.
-   - CI/CD: `deploy-netlify.yml` runs on every push to `main`. It builds with the
-     encrypted GitHub repo secrets and deploys with `NETLIFY_AUTH_TOKEN` +
-     `NETLIFY_SITE_ID`. Add those two secrets once and every push ships
-     automatically. Without them the workflow still runs lint + build as CI.
-   - Environment variables ship in two places:
-     - `netlify.toml [build.environment]` carries the five runtime vars so
-       manual builds render live Supabase data out of the box.
-     - The same five are mirrored as encrypted GitHub Actions repo secrets
-       (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
-       `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SITE_URL`, `SESSION_SECRET`).
-   - Rotating a key? Update the Netlify UI value first, then strip it from
-     `netlify.toml` in the same commit.
-2. **GitHub Actions CI** (`ci.yml`): lint + production build on every push/PR
+1. **Cloudflare Workers via GitHub Actions** (`deploy-cloudflare.yml`): runs
+   on every push to `main`. Steps: `npm ci` → `opennextjs-cloudflare build`
+   (runs `npm run build` via `buildCommand` in `open-next.config.ts`) →
+   `wrangler deploy`. Requires `CLOUDFLARE_API_TOKEN` in repo secrets (the
+   build reuses `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+   `SUPABASE_SERVICE_ROLE_KEY`, `SESSION_SECRET`, all already present);
+   without it the workflow exits early. `NEXT_PUBLIC_SITE_URL` is overridden
+   to `https://plugpay.co.ke` in the workflow.
+2. **Manual deploy**: `npm run build:cf` (or `npx opennextjs-cloudflare
+   build && npx wrangler deploy`) with `CLOUDFLARE_API_TOKEN` exported.
+   `wrangler.jsonc` pins the worker name (`plugpay`), compatibility date and
+   `nodejs_compat`, matching the live service. Non-secret config only —
+   `SUPABASE_SERVICE_ROLE_KEY` and `SESSION_SECRET` come from the build
+   environment (`scripts/gen-env.mjs` bakes them into the server bundle).
+   `RESEND_API_KEY` is stored as a Worker secret (`wrangler secret put
+   RESEND_API_KEY`).
+3. **GitHub Actions CI** (`ci.yml`): lint + production build on every push/PR
    so a broken build never reaches deployment.
+
+Rotating a key? Update the GitHub secret, push, and redeploy. `.env.local`
+(gitignored) holds the same five values for local dev; never commit
+`src/lib/env.gen.ts` with baked-in values (build rewrites it and git history
+would leak the service-role key — it must keep its committed placeholders).

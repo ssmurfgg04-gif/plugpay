@@ -11,7 +11,9 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",
-    "prebuild": "node scripts/gen-env.mjs"
+    "prebuild": "node scripts/gen-env.mjs",
+    "build:cf": "opennextjs-cloudflare build",
+    "deploy:cf": "opennextjs-cloudflare build && wrangler deploy"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -89,7 +91,6 @@
     "zustand": "^5.0.6"
   },
   "devDependencies": {
-    "@netlify/plugin-nextjs": "5.16.2",
     "@opennextjs/cloudflare": "^1.20.17",
     "@tailwindcss/postcss": "^4",
     "@types/leaflet": "^1.9.22",

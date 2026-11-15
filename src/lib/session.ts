@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import { cookies } from 'next/headers';
 import { GEN_SESSION_SECRET } from '@/lib/env.gen';
 
-// Netlify does not expose build.environment to function runtime. gen-env.mjs
+// The Workers runtime does not expose build-time env to functions either. gen-env.mjs
 // bakes the configured secret into a server-only module during the build.
 const SECRET =
   process.env.SESSION_SECRET ||

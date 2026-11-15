@@ -1,8 +1,8 @@
 // Supabase server client. Server-only: never import this from a client
 // component. Credentials resolve in this order:
-//   1. Real environment variables (Netlify UI / .env.local) — always win.
+//   1. Real environment variables (GitHub Actions env / .env.local) — always win.
 //   2. src/lib/env.gen.ts — baked at build time by scripts/gen-env.mjs from
-//      netlify.toml [build.environment] so deployed functions reach the DB
+//      the GitHub Actions/Cloudflare build environment so deployed functions reach the DB
 //      even though those variables do not exist at function runtime.
 // With neither, hasSupabase is false and server components fall back to the
 // bundled seed data (builds never break).

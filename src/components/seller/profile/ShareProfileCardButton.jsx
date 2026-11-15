@@ -9,6 +9,13 @@ export function ShareProfileCardButton(props) {
   var url = profilePublicUrl(slug);
 
   function share() {
+    // The store hydrates from /api/bootstrap after mount; until then bizName
+    // is empty and the card would render a placeholder. Nudge the user to
+    // retry instead of sharing a blank card.
+    if (!pp.sellerProfile || !pp.sellerProfile.bizName) {
+      pp.showToast("Your profile is still loading — try again in a moment.");
+      return;
+    }
     shareProfileCard({
       seller: {
         bizName: pp.sellerProfile.bizName,
@@ -16,6 +23,7 @@ export function ShareProfileCardButton(props) {
         role: pp.sellerProfile.role,
         bio: pp.sellerProfile.bio,
         street: pp.sellerProfile.street,
+        whatsapp: pp.sellerProfile.whatsapp,
         verified: pp.sellerProfile.verified,
       },
       stats: pp.sellerStats,

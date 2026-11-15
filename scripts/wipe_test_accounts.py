@@ -11,7 +11,7 @@ import urllib.request
 
 BASE = "https://xycmzhpkuzyhmgucwqys.supabase.co/rest/v1"
 KEY = None
-for line in open("/home/z/my-project/plugpay/netlify.toml"):
+for line in open("/home/ryioshi/Projects/plugpay/.env.local"):
     if line.strip().startswith("SUPABASE_SERVICE_ROLE_KEY"):
         KEY = line.split("=", 1)[1].strip().strip('"')
 if not KEY:

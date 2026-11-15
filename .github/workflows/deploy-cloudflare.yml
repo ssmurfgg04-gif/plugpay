@@ -2,7 +2,7 @@ name: Deploy to Cloudflare Workers
 
 # Deploys the production OpenNext build to the "plugpay" Worker (plugpay.co.ke)
 # on every push to main. Until CLOUDFLARE_API_TOKEN exists in the repo's
-# Actions secrets this workflow exits early (same pattern as deploy-netlify.yml).
+# Actions secrets this workflow exits early.
 #
 # One-time setup (site owner):
 #   GitHub repo → Settings → Secrets and variables → Actions:
@@ -51,8 +51,8 @@ jobs:
 
       # opennextjs-cloudflare build runs `npm run build` (pinned via
       # open-next.config.ts) with the env below. NEXT_PUBLIC_SITE_URL must be
-      # the live domain — the committed secret may still point at Netlify,
-      # so it is overridden here.
+      # the live domain — overridden here so a stale
+      # secret value can never point share links at the old host.
       - name: Build and deploy to Cloudflare Workers
         if: steps.creds.outputs.ok == 'true'
         env:

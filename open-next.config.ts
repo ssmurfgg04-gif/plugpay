@@ -4,9 +4,12 @@ import { defineCloudflareConfig } from "@opennextjs/cloudflare";
 // worker, so the default (per-isolate) cache is used. Add an
 // r2IncrementalCache bucket here if shared ISR caching is ever needed.
 //
-// buildCommand is pinned to npm for determinism: the repo also ships a
-// bun.lock, which would otherwise make the auto-detector prefer bun's script
-// runner. Both work; CI builds with `npm run build`, so mirror that.
-export default defineCloudflareConfig({
+// buildCommand is pinned at the top level to npm: the repo ships a stale
+// bun.lock, which makes the auto-detector pick `bun run build` — fine on
+// machines with bun, but GitHub Actions (and most environments) only have
+// npm/node. Spreading keeps defineCloudflareConfig's keys intact while
+// adding the override the aws build layer reads.
+export default {
+  ...defineCloudflareConfig({}),
   buildCommand: "npm run build",
-} as Parameters<typeof defineCloudflareConfig>[0]);
+};

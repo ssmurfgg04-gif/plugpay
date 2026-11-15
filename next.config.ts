@@ -20,6 +20,7 @@ const nextConfig: NextConfig = {
     // prefetchInlining disabled the stale-hint path never runs and hydration
     // is byte-stable. Cost: navigations lose the inlined-hint fast path.
     prefetchInlining: false,
+    agentUpgrade: "security",
   },
 };
 

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { usePlugPay } from "@/store/context";
+import { ShareProfileCardButton } from "@/components/seller/profile/ShareProfileCardButton";
 
 export function SellerHero(props) {
   var pp = usePlugPay();
@@ -50,6 +51,7 @@ export function SellerHero(props) {
             {editing ? "\u2715 Close" : "\u270F\uFE0F Edit header"}
           </button>
         )}
+        <ShareProfileCardButton />
         <div className="tp-hero-avatar-wrap">
           <div className="tp-hero-avatar">{(sp.bizName || "W").charAt(0).toUpperCase()}</div>
           <div className="tp-hero-av-check">{"\u2713"}</div>

@@ -1590,11 +1590,13 @@ footer {
   padding: 0;
   opacity: 0;
   pointer-events: none;
-  transition: opacity .25s;
+  visibility: hidden;
+  transition: opacity .25s, visibility .25s;
 }
 .modal-overlay.on {
   opacity: 1;
   pointer-events: all;
+  visibility: visible;
 }
 .modal {
   background: #fff;
@@ -6300,6 +6302,7 @@ select.prof-input {
 .sp-wrap .modal-tabs{position:sticky;top:0;z-index:20}
 .sp-wrap .tp-navbar-btn{text-decoration:none}
 .sp-hero-edit{position:absolute;top:18px;right:14px;background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:100px;padding:6px 12px;font-size:11px;font-weight:800;cursor:pointer;font-family:var(--fb)}
+.sp-hero-share{position:absolute;top:58px;right:14px;z-index:6;display:inline-flex;align-items:center;gap:6px;background:#8b008b;color:#fff;border:0;border-radius:100px;padding:6px 12px;font-size:11px;font-weight:800;cursor:pointer;font-family:var(--fb)}
 .sp-edit-btn{background:#fff;border:1.5px solid var(--border2,#e7e8ef);color:var(--ink);border-radius:100px;padding:6px 12px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:var(--fb);white-space:nowrap;text-decoration:none;flex-shrink:0}
 .sp-edit-btn.on{background:var(--accent);border-color:var(--accent);color:#fff}
 .sp-edit-btn.danger{color:#b3261e;border-color:#f3c7c3}
@@ -6381,6 +6384,7 @@ select.prof-input {
 .sp-dock-btn.rec{background:#8b008b}
 .sp-dock-btn:active{transform:scale(.97)}
 .sp-hero-edit{background:#fff!important;color:#8b008b!important;border:0!important;z-index:6;padding:8px 14px!important;box-shadow:0 4px 12px rgba(0,0,0,.18)}
+.sp-hero-share{position:absolute;top:58px;right:14px;z-index:6;display:inline-flex;align-items:center;gap:6px;background:#8b008b!important;color:#fff!important;border:0!important;padding:8px 14px!important;border-radius:100px;font-size:11px;font-weight:800;cursor:pointer;font-family:var(--fb);box-shadow:0 4px 12px rgba(0,0,0,.18)}
 a.bd-btn{text-decoration:none}
 .dx-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
 .dx-btns .bd-btn{margin-top:0}

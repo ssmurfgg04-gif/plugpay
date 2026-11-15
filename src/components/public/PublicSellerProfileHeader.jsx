@@ -2,6 +2,7 @@
 
 import { usePlugPay } from "@/store/context";
 import { useSV } from "@/lib/public";
+import { profilePublicUrl } from "@/lib/profile-card-image";
 
 export function PublicSellerProfileHeader(props) {
   const { toggleFollowMerchant, following, showToast, copyText, sessionInfo } = usePlugPay();
@@ -21,7 +22,7 @@ export function PublicSellerProfileHeader(props) {
         : "Verification pending";
   var shareSlug =
     (sv.own ? sessionInfo && sessionInfo.merchantSlug : sv.slug) || "";
-  var shareUrl = shareSlug ? "https://plugnply.netlify.app/sellers/" + shareSlug : "";
+  var shareUrl = shareSlug ? profilePublicUrl(shareSlug) : "";
   return (
     <div className="tp-hero public-seller-profile-header">
       <div className="tp-hero-avatar-wrap">

@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ["sharp"],
   // The Cloudflare Workers (OpenNext) adapter provisions its own bundle;
   // standalone output is intentionally left off.
   reactStrictMode: false,

@@ -16,14 +16,40 @@ export function SellerProfileCompliance() {
     pp = f.pp;
   var inputsRef = useRef({});
 
+  var compressImage = function (file, cb) {
+    if (!file.type.startsWith("image/")) { cb(file); return; }
+    var img = new Image();
+    var url = URL.createObjectURL(file);
+    img.onload = function () {
+      URL.revokeObjectURL(url);
+      var max = 1280;
+      var w = img.width, h = img.height;
+      if (w > max || h > max) {
+        if (w >= h) { h = Math.round((h * max) / w); w = max; }
+        else { w = Math.round((w * max) / h); h = max; }
+      }
+      var canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      var ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, w, h);
+      canvas.toBlob(function (blob) {
+        if (!blob || blob.size >= file.size) { cb(file); return; }
+        cb(new File([blob], file.name.replace(/\.[^.]+$/, ".webp"), { type: "image/webp" }));
+      }, "image/webp", 0.82);
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); cb(file); };
+    img.src = url;
+  };
+
   var handleUpload = function (docKey, name, file) {
     if (!file) return;
     pp.setDocStatus(function (s) {
       return Object.assign({}, s, { [docKey]: "uploading" });
     });
-    var formData = new FormData();
-    formData.append("file", file);
-    formData.append("docKey", docKey);
+    compressImage(file, function (compressed) {
+      var formData = new FormData();
+      formData.append("file", compressed);
+      formData.append("docKey", docKey);
     fetch("/api/upload", { method: "POST", body: formData })
       .then(function (r) {
         return r.json();
@@ -47,6 +73,7 @@ export function SellerProfileCompliance() {
         });
         pp.showToast("Upload failed — please try again", "error");
       });
+    });
   };
 
   return (

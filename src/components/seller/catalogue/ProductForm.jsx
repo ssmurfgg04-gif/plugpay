@@ -34,7 +34,7 @@ export function ProductForm(props) {
         <div
           className="sp-img-prev"
           onClick={function () {
-            fileRef.current && fileRef.current.click();
+            if (fileRef.current) fileRef.current.click();
           }}
         >
           {f.image ? (
@@ -79,7 +79,7 @@ export function ProductForm(props) {
           <button
             className="sp-edit-btn on"
             onClick={function () {
-              fileRef.current && fileRef.current.click();
+              if (fileRef.current) fileRef.current.click();
             }}
           >
             {f.image ? "Change image" : "Upload image"}

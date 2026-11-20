@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
           from: 'PlugPay <noreply@plugpay.co.ke>',
           to: [email],
           subject: 'Reset your PlugPay password',
-          html: `<p>Click the link below to reset your password (valid for 30 minutes):</p><p><a href="${resetLink}">${resetLink}</a></p><p>If you did not request this, ignore this email.</p>`,
+          html: `<p>Click the link below to reset your password (valid for 30 minutes):</p><p><a href="${resetLink.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}">${resetLink.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</a></p><p>If you did not request this, ignore this email.</p>`,
         }),
       });
     } catch (e) {

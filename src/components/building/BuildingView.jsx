@@ -35,6 +35,25 @@ export function BuildingView(p) {
         <div className="bh-inner">
           <div className="bh-name">{"\uD83C\uDFE2 " + p.name}</div>
           <div className="bh-addr">{p.address}</div>
+          {p.mapsUrl ? (
+            <a
+              href={p.mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: "inline-block", marginTop: 6, fontSize: 12, color: "var(--accent)", fontWeight: 700, textDecoration: "none" }}
+            >
+              {"Open in Google Maps →"}
+            </a>
+          ) : null}
+          {p.mapsEmbedUrl ? (
+            <iframe
+              title="Building location"
+              src={p.mapsEmbedUrl}
+              style={{ width: "100%", height: 200, border: 0, borderRadius: 8, marginTop: 10 }}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+          ) : null}
           <div className="bldg-hero-grid">
             {p.stats.map(function (x) {
               return (

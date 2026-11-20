@@ -3,12 +3,15 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import {
+  isAdminEmail,
   normalizeEmail,
   serializeSession,
   sessionCookieOptions,
   verifyPassword,
   SESSION_COOKIE,
 } from '@/lib/session';
+import { limitAuth } from '@/lib/rate-limit';
+import { logAudit } from '@/lib/audit';
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
@@ -24,6 +27,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Database not configured. Try again shortly.' }, { status: 503 });
   }
 
+  const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+  const { ok: rateOk, remaining } = limitAuth('login', clientIP, 60, 60_000);
+  if (!rateOk) {
+    return NextResponse.json({ ok: false, error: 'Too many sign-in attempts. Try again in a minute.' }, { status: 429 });
+  }
   try {
     const { data: user } = await supabase()
       .from('app_users')

@@ -9,7 +9,7 @@ interface AdminData {
   buildings: Array<{ id: string; slug: string; name: string; address: string; area: string; total_stalls: number; registered_merchants: number; verified: boolean }>;
   receipts: Array<{ id: string; receipt_no: string; merchant_name: string; buyer_name: string; total_kes: number; mpesa_code: string; status: string; created_at: string }>;
   invoices: Array<{ id: string; token: string; number: string; merchant_name: string; buyer_name: string; total: number; status: string; created_at: string }>;
-  claims: Array<{ id: string; token: string; business_name: string; owner_name: string; building_name: string; status: string; verified: boolean; created_at: string }>;
+  claims: Array<{ id: string; token: string; business_name: string; owner_name: string; building_name: string; loc: string; status: string; verified: boolean; created_at: string }>;
 }
 
 export default function AdminPage() {
@@ -41,6 +41,11 @@ export default function AdminPage() {
     const j = await r.json();
     if (!j.ok) alert(j.error || 'Failed');
     else load();
+  };
+  const adminAction = async (action: string, slug: string, value?: number) => {
+    const r = await fetch('/api/admin/action', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, slug, value }) });
+    const j = await r.json();
+    if (!j.ok) alert(j.error || 'Failed');
   };
 
   if (loading) return <div style={{ padding: 40, fontFamily: 'sans-serif' }}>Loading admin…</div>;
@@ -100,7 +105,7 @@ export default function AdminPage() {
 
       {tab === 'merchants' && (
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-          <thead><tr style={{ background: '#eee' }}><th style={{ textAlign: 'left', padding: 8 }}>Business</th><th style={{ textAlign: 'left', padding: 8 }}>Owner</th><th style={{ textAlign: 'left', padding: 8 }}>Email</th><th style={{ textAlign: 'left', padding: 8 }}>Building</th><th style={{ textAlign: 'left', padding: 8 }}>Verified</th><th style={{ textAlign: 'right', padding: 8 }}>Sales</th><th style={{ textAlign: 'right', padding: 8 }}>Trust</th></tr></thead>
+          <thead><tr style={{ background: '#eee' }}><th style={{ textAlign: 'left', padding: 8 }}>Business</th><th style={{ textAlign: 'left', padding: 8 }}>Owner</th><th style={{ textAlign: 'left', padding: 8 }}>Email</th><th style={{ textAlign: 'left', padding: 8 }}>Building</th><th style={{ textAlign: 'left', padding: 8 }}>Verified</th><th style={{ textAlign: 'right', padding: 8 }}>Sales</th><th style={{ textAlign: 'right', padding: 8 }}>Trust</th><th style={{ padding: 8 }}>Actions</th></tr></thead>
           <tbody>
             {data.merchants.map((m) => (
               <tr key={m.id} style={{ borderBottom: '1px solid #eee' }}>
@@ -111,6 +116,14 @@ export default function AdminPage() {
                 <td style={{ padding: 8 }}>{m.verified}</td>
                 <td style={{ padding: 8, textAlign: 'right' }}>{m.sales_count}</td>
                 <td style={{ padding: 8, textAlign: 'right' }}>{m.trust_score}</td>
+                <td style={{ padding: 8, whiteSpace: 'nowrap' }}>
+                  <button onClick={() => adminAction('verify_badge', m.slug).then(load)} style={{ marginRight: 4 }}>Verify</button>
+                  <button onClick={() => adminAction('revoke_badge', m.slug).then(load)} style={{ marginRight: 4 }}>Revoke</button>
+                  <button onClick={() => adminAction('suspend', m.slug).then(load)} style={{ marginRight: 4, color: '#c00' }}>Suspend</button>
+                  <button onClick={() => adminAction('restore', m.slug).then(load)} style={{ marginRight: 4 }}>Restore</button>
+                  <button onClick={() => { const v = prompt('New trust score (0-100)'); if (v) adminAction('trust_override', m.slug, Number(v)).then(load); }} style={{ marginRight: 4 }}>Trust</button>
+                  <button onClick={() => { if (confirm('Vacate this seller?')) adminAction('vacate', m.slug).then(load); }}>Vacate</button>
+                </td>
               </tr>
             ))}
           </tbody>

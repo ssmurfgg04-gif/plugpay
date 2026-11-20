@@ -34,7 +34,7 @@ function digitsOnly(p) {
 function sameNumber(a, b) {
   var x = digitsOnly(a).slice(-9),
     y = digitsOnly(b).slice(-9);
-  return !!x && x === y;
+  return Boolean(x) && x === y;
 }
 
 var PAGE = 4;
@@ -79,11 +79,13 @@ export function PlugPayProvider({ children }) {
       .catch(() => {});
   }, []);
   const openMerchantModal = useCallback(() => {
-    setViewedSeller(null);
+     
+    void setViewedSeller(null);
     openModal("modal-merchant");
   }, [openModal]);
   const openMerchantModalOnReviews = useCallback(() => {
-    setViewedSeller(null);
+     
+    void setViewedSeller(null);
     openModal("modal-merchant");
     setMerchantTab("reviews");
   }, [openModal]);
@@ -92,7 +94,8 @@ export function PlugPayProvider({ children }) {
   }, [isOpen]);
   const [following, setFollowing] = useState(false);
   const viewSellerProfile = useCallback(() => {
-    setViewedSeller(null);
+     
+    void setViewedSeller(null);
     openModal("modal-merchant");
     setMerchantTab("profile");
   }, [openModal]);
@@ -133,7 +136,8 @@ export function PlugPayProvider({ children }) {
     }, 60);
   };
   const openOwnProfile = () => {
-    setViewedSeller(null);
+     
+    void setViewedSeller(null);
     setMerchantTab("profile");
     openModal("modal-merchant");
     window.setTimeout(() => {
@@ -157,7 +161,8 @@ export function PlugPayProvider({ children }) {
     const sameBuilding =
       String(p.building).trim().toLowerCase() === stallAssignment.building.trim().toLowerCase();
     if (sameBuilding && normLoc(p.loc) === normLoc(stallAssignment.loc)) {
-      openOwnProfile();
+       
+      void openOwnProfile();
       return;
     }
     const bid = lbIdByName(p.building);
@@ -167,7 +172,8 @@ export function PlugPayProvider({ children }) {
       tp = at(lists.pending);
     const t = tv || tp;
     if (t && t.phone && sameNumber(t.phone, sellerProfile.phone)) {
-      openOwnProfile();
+       
+      void openOwnProfile();
       return;
     }
     const owner = t ? t.name : p.owner;
@@ -203,7 +209,8 @@ export function PlugPayProvider({ children }) {
     const own =
       sameNumber(ref.phone, sellerProfile.phone) || (ref.name && ref.name === sellerProfile.ownerName);
     if (own) {
-      openOwnProfile();
+       
+      void openOwnProfile();
       return;
     }
     const dir = directory.filter((x) => x.name === ref.name)[0];
@@ -228,14 +235,16 @@ export function PlugPayProvider({ children }) {
   };
   const openDirectorySeller = (m) => {
     const name = m.name || m.owner;
-    const dir = directory.filter((x) => x.name === name)[0];
+    const dir = directory.filter((x) => { return x.name === name; })[0];
     if (!dir) {
-      openOwnProfile();
+       
+      void openOwnProfile();
       return;
     }
     const parts = dir.sub.split(" \u00b7 ");
     if (dir.name === sellerProfile.ownerName) {
-      openOwnProfile();
+       
+      void openOwnProfile();
       return;
     }
     showSeller({
@@ -260,7 +269,8 @@ export function PlugPayProvider({ children }) {
   const loadSellerPage = (id) => {
     const k = ppSlug(id);
     if (k && ppSlug(sellerProfile.ownerName) === k) {
-      setViewedSeller(null);
+       
+    void setViewedSeller(null);
       setMerchantTab("profile");
       return true;
     }
@@ -435,7 +445,7 @@ export function PlugPayProvider({ children }) {
       // Success: the session cookie is set server-side.
       const slug = res.merchantSlug || null;
       const role = res.role || authRole;
-      finishLoginRef.current && finishLoginRef.current(slug, role, res.email || authEmail.trim());
+      if (finishLoginRef.current) finishLoginRef.current(slug, role, res.email || authEmail.trim());
     });
   }, [authBusy, authMode, authEmail, authPassword, authRole, authBusinessName, showToast]);
   const authLogout = useCallback(() => {
@@ -1144,6 +1154,8 @@ return true;
   const setObAgentVerifying = setObAgentBusy;
   const [obStep_, setObStep_] = useState(1);
   const [obBldgName, setObBldgName] = useState("");
+  const [obStreet, setObStreet] = useState("");
+  const [obMapsLink, setObMapsLink] = useState("");
   const [obFloorsCount, setObFloorsCount] = useState("6");
   const [obBasementsCount, setObBasementsCount] = useState("0");
   const [obFloorStalls, setObFloorStallsState] = useState({});
@@ -1225,12 +1237,12 @@ return true;
         showToast(
           `\u{1F389} Building published with ${n} seller${n === 1 ? "" : "s"} live on PlugPay! QR code sent to the manager and a claim link sent to each seller on WhatsApp.`,
         );
-        claimsApiRef.current &&
-          claimsApiRef.current.publish(obMerchantList, obBldgName || "New building", obTotalStalls);
+        if (claimsApiRef.current) claimsApiRef.current.publish(obMerchantList, obBldgName || "New building", obTotalStalls);
         setAgentBuildings((b) => [
           {
             name: obBldgName || "New building",
-            street: "Nairobi CBD",
+            street: obStreet || "Nairobi CBD",
+            maps_link: obMapsLink || null,
             floorsCount: obFloorsCount,
             stalls: obTotalStalls,
             merchants: obMerchantList.length,
@@ -1247,7 +1259,7 @@ return true;
       if (next < 1 || next > total) return;
       setObStep_(next);
     },
-    [closeModal, obBldgName, obFloorsCount, obMerchantList, obStep_, obTotalStalls, showToast],
+    [closeModal, obBldgName, obStreet, obMapsLink, obFloorsCount, obMerchantList, obStep_, obTotalStalls, showToast],
   );
   const obAddMerchant = useCallback(() => {
     if (!obNewBiz.trim()) {
@@ -1285,8 +1297,7 @@ return true;
             : m,
         ),
       );
-      claimsApiRef.current &&
-        claimsApiRef.current.upsert(
+      if (claimsApiRef.current) claimsApiRef.current.upsert(
           {
             id: obEditingMerchantId,
             biz: obNewBiz,
@@ -1316,7 +1327,7 @@ return true;
         status: "invited",
       };
       setObMerchantList((l) => [...l, nm]);
-      claimsApiRef.current && claimsApiRef.current.upsert(nm, obBldgName);
+      if (claimsApiRef.current) claimsApiRef.current.upsert(nm, obBldgName);
       showToast(`${obNewBiz} registered \u2713 Claim link sent to ${obNewPhone} on WhatsApp`);
     }
     setObNewName("");
@@ -1460,9 +1471,17 @@ return true;
     upsert: upsertAgentClaim,
     publish: publishAgentClaims,
   };
+  const resendCooldownRef = useRef({});
   const resendClaim = (token) => {
     const c = agentClaims.filter((x) => x.token === token)[0];
     if (!c) return;
+    const now = Date.now();
+    const last = resendCooldownRef.current[token] || 0;
+    if (now - last < 30_000) {
+      showToast(`Wait ${Math.ceil((30_000 - (now - last)) / 1000)}s before resending`);
+      return;
+    }
+    resendCooldownRef.current[token] = now;
     openWhatsApp(c.phone, waClaimText(c));
     showToast(`Claim link resent to ${c.ownerName || c.businessName} on WhatsApp`);
   };
@@ -2042,6 +2061,10 @@ return true;
     obStep,
     obBldgName,
     setObBldgName,
+    obStreet,
+    setObStreet,
+    obMapsLink,
+    setObMapsLink,
     obFloorsCount,
     setObFloorsCount,
     obBasementsCount,

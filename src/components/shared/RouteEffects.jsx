@@ -15,7 +15,6 @@ export function RouteEffects() {
   const pp = usePlugPay();
   useEffect(() => {
     ROUTE_MODALS.forEach((id) => pp.closeModal(id));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]);
+    }, [pathname]);
   return null;
 }

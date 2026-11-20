@@ -92,3 +92,4 @@ scripts/finalize_images.py
 /.wrangler/
 .env.local
 .dev.vars
+PlugPay-Profile-profile.png

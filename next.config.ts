@@ -3,9 +3,6 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // The Cloudflare Workers (OpenNext) adapter provisions its own bundle;
   // standalone output is intentionally left off.
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   reactStrictMode: false,
   images: {
     unoptimized: true,

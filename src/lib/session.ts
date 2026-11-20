@@ -14,6 +14,7 @@ const SECRET =
   (process.env.NODE_ENV === 'production' ? '' : 'plugpay-local-development-only-change-me');
 
 export const SESSION_COOKIE = 'pp_session';
+export const SESSION_REFRESH_COOKIE = 'pp_refresh';
 export type PortalRole = 'trader' | 'landlord' | 'agent' | 'admin';
 
 export interface SessionPayload {
@@ -23,6 +24,8 @@ export interface SessionPayload {
   merchantSlug: string | null;
   landlordId: string | null;
   iat: number;
+  maxAge?: number;
+  adminOverride?: boolean;
 }
 
 function sign(data: string): string {
@@ -33,6 +36,37 @@ function sign(data: string): string {
 export function serializeSession(payload: SessionPayload): string {
   const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
   return `${body}.${sign(body)}`;
+}
+
+export function serializeRefreshToken(payload: {userId: string; iat: number}): string {
+  const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  return `${body}.${sign('refresh:' + body)}`;
+}
+
+export function parseRefreshToken(token: string | undefined): {userId: string; iat: number} | null {
+  if (!token) return null;
+  const [body, sig] = token.split('.');
+  if (!body || !sig) return null;
+  const expected = sign('refresh:' + body);
+  if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
+  try {
+    const raw = JSON.parse(Buffer.from(body, 'base64url').toString()) as {userId?: unknown; iat?: unknown};
+    if (!raw.userId || typeof raw.userId !== 'string') return null;
+    return { userId: raw.userId, iat: Number(raw.iat) || 0 };
+  } catch { return null; }
+}
+
+export function isAdmin(payload: SessionPayload): boolean {
+  return payload.role === 'admin';
+}
+
+// Admin accounts: trusted via env list (replaces untracked DB-only roles).
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
+  .split(',')
+  .map((s) => s.trim().toLowerCase())
+  .filter(Boolean);
+export function isAdminEmail(email: string | undefined): boolean {
+  return !!email && ADMIN_EMAILS.includes(email.toLowerCase());
 }
 
 export function parseSession(token: string | undefined): SessionPayload | null {
@@ -48,14 +82,27 @@ export function parseSession(token: string | undefined): SessionPayload | null {
     const raw = JSON.parse(Buffer.from(body, 'base64url').toString()) as Partial<SessionPayload>;
     const roles: PortalRole[] = ['trader', 'landlord', 'agent', 'admin'];
     if (!raw.userId || !raw.email || !roles.includes(raw.role as PortalRole)) return null;
-    return {
+    const effRole = raw.adminOverride ? 'admin' : (raw.role as PortalRole);
+    const session = {
       userId: String(raw.userId),
       email: String(raw.email),
-      role: raw.role as PortalRole,
+      role: effRole,
       merchantSlug: raw.merchantSlug ?? null,
       landlordId: raw.landlordId ?? null,
       iat: Number(raw.iat) || 0,
+      maxAge: Number(raw.maxAge) || 60 * 60 * 4,
+      adminOverride: raw.adminOverride === true,
     };
+    if (session.adminOverride) {
+      session.role = 'admin';
+      // Refreshable for days; others via the refresh token machinery.
+      session.maxAge = 60 * 60 * 24 * 30;
+    }
+    if (session.maxAge <= 0) return null;
+    const elapsedSec = Math.max(0, (Date.now() - session.iat) / 1000);
+    if (session.adminOverride && elapsedSec > 60 * 60 * 24 * 30) return null;
+    if (elapsedSec > session.maxAge + 60) return null;
+    return session;
   } catch {
     return null;
   }

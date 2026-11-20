@@ -278,10 +278,15 @@ export function BuildingViewContainer(p) {
     },
   ];
   var street = b.street || (b.sub ? String(b.sub).split(" \u00B7 ")[0] : "");
+  var mapsUrl = b.maps_link ? String(b.maps_link) : (street ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(street + " Nairobi CBD") : "");
+  var apiKey = (typeof process !== 'undefined' && process.env && process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) ? process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY : '';
+  var embedUrl = apiKey && street ? "https://www.google.com/maps/embed/v1/place?key=" + encodeURIComponent(apiKey) + "&q=" + encodeURIComponent(street + ", Nairobi CBD") : "";
   return (
     <BuildingView
       name={b.name}
       address={(street ? street + " \u00B7 " : "") + "Nairobi CBD"}
+      mapsUrl={mapsUrl}
+      mapsEmbedUrl={embedUrl}
       stats={stats}
       tabs={FLOOR_TABS}
       floors={floors}

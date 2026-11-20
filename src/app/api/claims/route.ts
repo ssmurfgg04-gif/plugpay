@@ -1,11 +1,12 @@
 // Claims API: agent-owned writes, token-scoped public reads, and seller claim completion.
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
+import { limitAuth } from '@/lib/rate-limit';
 import { hasSupabase, supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
-const CLAIM_FIELDS = 'client_id, token, business_name, owner_name, phone, category, floor, number, loc, building_name, status, verified, source, draft, sent_at, claimed_at, created_at';
+const CLAIM_FIELDS = 'client_id, token, business_name, owner_name, phone, category, floor, number, loc, building_name, status, verified, source, draft, sent_at, claimed_at, created_at, expires_at';
 
 function toClientClaim(c: Record<string, unknown>) {
   return {

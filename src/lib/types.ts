@@ -14,3 +14,12 @@ export interface SearchResult {
   initials: string;
   hue: number;
 }
+
+// Live app_users row for refresh/me flows.
+export interface AppUserRow {
+  id: string;
+  email: string;
+  role: string;
+  merchant_slug: string | null;
+  landlord_id: string | null;
+}

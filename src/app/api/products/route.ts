@@ -49,7 +49,7 @@ async function merchantIdForSession(): Promise<{ ok: true; id: string } | { ok: 
 
 export async function GET() {
   const m = await merchantIdForSession();
-  if (!m.ok) return NextResponse.json({ ok: false, error: m.error }, { status: m.status });
+  if (!m.ok) { const e = m as { ok: false; status: number; error: string }; return NextResponse.json({ ok: false, error: e.error }, { status: e.status }); }
   const { supabase } = await import('@/lib/supabase');
   const { data, error } = await supabase()
     .from('products')
@@ -62,7 +62,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const m = await merchantIdForSession();
-  if (!m.ok) return NextResponse.json({ ok: false, error: m.error }, { status: m.status });
+  if (!m.ok) { const e = m as { ok: false; status: number; error: string }; return NextResponse.json({ ok: false, error: e.error }, { status: e.status }); }
   const body = await req.json().catch(() => null);
   const name = String(body?.name ?? '').trim().slice(0, 160);
   const price = Math.max(0, Math.min(10_000_000, Number(body?.price ?? 0) || 0));
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   const m = await merchantIdForSession();
-  if (!m.ok) return NextResponse.json({ ok: false, error: m.error }, { status: m.status });
+  if (!m.ok) { const e = m as { ok: false; status: number; error: string }; return NextResponse.json({ ok: false, error: e.error }, { status: e.status }); }
   const id = req.nextUrl.searchParams.get('id') ?? String(req.body ? '' : '');
   const body = await req.json().catch(() => null);
   const pid = String(body?.id ?? id ?? '').trim();
@@ -113,7 +113,7 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const m = await merchantIdForSession();
-  if (!m.ok) return NextResponse.json({ ok: false, error: m.error }, { status: m.status });
+  if (!m.ok) { const e = m as { ok: false; status: number; error: string }; return NextResponse.json({ ok: false, error: e.error }, { status: e.status }); }
   const pid = req.nextUrl.searchParams.get('id') ?? '';
   if (!pid) return NextResponse.json({ ok: false, error: 'Missing product id' }, { status: 400 });
   const { supabase } = await import('@/lib/supabase');

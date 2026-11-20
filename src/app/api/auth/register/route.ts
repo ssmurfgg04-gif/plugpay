@@ -6,30 +6,35 @@
 // reviews. Nothing demo is attached to the user, ever.
 
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 import {
   EMAIL_RE,
   PortalRole,
   hashPassword,
+  isAdminEmail,
   normalizeEmail,
   serializeSession,
   sessionCookieOptions,
   SESSION_COOKIE,
 } from '@/lib/session';
-
-const ROLES: PortalRole[] = ['trader', 'landlord', 'agent', 'admin'];
+import { limitAuth } from '@/lib/rate-limit';
+import { logAudit } from '@/lib/audit';
 
 function slugify(prefix: string): string {
-  const rand = Math.random().toString(36).slice(2, 8);
+  const rand = crypto.randomBytes(6).toString('base64url').slice(0, 8);
   return `${prefix}-${Date.now().toString(36)}-${rand}`;
 }
+
+const ROLES: PortalRole[] = ['trader', 'landlord', 'agent', 'admin'];
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   const email = normalizeEmail(String(body?.email ?? ''));
   const password = String(body?.password ?? '');
-  const role = (ROLES.includes(String(body?.role)) ? String(body.role) : 'trader') as PortalRole;
+  const role = (ROLES.includes(String(body?.role) as PortalRole) ? (String(body?.role) as PortalRole) : 'trader');
   const businessName = String(body?.businessName ?? '').trim().slice(0, 120);
   const ownerName = String(body?.ownerName ?? '').trim().slice(0, 120);
+  const phone = String(body?.phone ?? '').trim().slice(0, 40);
 
   if (!EMAIL_RE.test(email)) {
     return NextResponse.json({ ok: false, error: 'Enter a valid email address' }, { status: 400 });
@@ -39,12 +44,18 @@ export async function POST(req: NextRequest) {
   }
   if (role === 'admin') {
     const adminCode = String(body?.adminCode ?? '').trim();
-    const expected = process.env.ADMIN_CODE || 'plugpay-admin-dev';
+    const expected = process.env.ADMIN_CODE || '';
+    if (!expected) return NextResponse.json({ ok: false, error: 'Admin registration is disabled' }, { status: 503 });
     if (!adminCode || adminCode !== expected) {
       return NextResponse.json({ ok: false, error: 'Invalid admin code' }, { status: 403 });
     }
   }
 
+  const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+  const { ok: rateOk } = limitAuth('register', clientIP, 60, 60_000);
+  if (!rateOk) {
+    return NextResponse.json({ ok: false, error: 'Too many sign-ups from this address. Try again in a minute.' }, { status: 429 });
+  }
   const { hasSupabase, supabase } = await import('@/lib/supabase');
   if (!hasSupabase) {
     return NextResponse.json({ ok: false, error: 'Database not configured. Try again shortly.' }, { status: 503 });
@@ -121,11 +132,19 @@ export async function POST(req: NextRequest) {
     if (uErr || !user?.id) {
       return NextResponse.json({ ok: false, error: 'Could not create the account. Try again.' }, { status: 500 });
     }
+    // Best-effort: store phone + agent approval status if those columns exist.
+    try {
+      await db.from('app_users').update({ phone: phone || null, status: role === 'agent' ? 'pending' : 'active' }).eq('id', user.id);
+    } catch {
+      // columns may not exist yet (migration 0011)
+    }
 
+    const effRole = role === 'admin' || isAdminEmail(email) ? 'admin' : role;
+    await logAudit('register', user.id, { email, role });
     const res = NextResponse.json({
       ok: true,
       created: true,
-      role,
+      role: effRole,
       merchantSlug,
       email,
     });
@@ -134,10 +153,12 @@ export async function POST(req: NextRequest) {
       serializeSession({
         userId: user.id,
         email,
-        role,
+        role: effRole,
         merchantSlug,
         landlordId,
         iat: Date.now(),
+        maxAge: effRole === 'admin' ? 60 * 60 * 24 * 30 : 60 * 60 * 4,
+        adminOverride: effRole === 'admin',
       }),
       sessionCookieOptions(),
     );

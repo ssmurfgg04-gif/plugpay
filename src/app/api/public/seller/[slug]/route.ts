@@ -6,6 +6,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasSupabase, supabase } from '@/lib/supabase';
 
+function shortenBuyerName(name: string): string {
+  const n = name.trim();
+  if (n.length <= 12) return n;
+  const parts = n.split(/\s+/);
+  if (parts.length >= 2) return `${parts[0]} ${parts[parts.length - 1][0]}.`;
+  return n.slice(0, 10) + '…';
+}
+
 export const dynamic = 'force-dynamic';
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ slug: string }> }) {
@@ -59,7 +67,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ slug: stri
         image: String(p.image_url ?? ''),
       })),
       reviews: (revRes.data ?? []).map((r: Record<string, unknown>) => ({
-        buyerName: String(r.author_name ?? 'Buyer'),
+        buyerName: shortenBuyerName(String(r.author_name ?? 'Buyer')),
         initials: String(r.author_initials ?? ''),
         rating: Number(r.rating ?? 0),
         comment: String(r.body ?? ''),

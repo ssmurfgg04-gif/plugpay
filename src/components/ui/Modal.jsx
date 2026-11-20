@@ -32,8 +32,7 @@ export function Modal({
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+    }, [open]);
   return (
     <div
       className={`modal-overlay${open ? " on" : ""}`}

@@ -235,7 +235,7 @@ export function StallSellerCard(props) {
                 type="button"
                 className="ph-add"
                 onClick={function () {
-                  fileRef.current && fileRef.current.click();
+                  if (fileRef.current) fileRef.current.click();
                 }}
               >
                 {Ic("image-plus")}

@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createReceipt } from '@/lib/data';
 import { getSession } from '@/lib/session';
+import { logAudit } from '@/lib/audit';
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Buyer phone must be a Kenyan number like 0712345678' }, { status: 400 });
   }
   if (items.length === 0) return NextResponse.json({ ok: false, error: 'Add at least one item' }, { status: 400 });
-  if (!/^[A-Z0-9]{8,12}$/.test(mpesaCode)) {
+  if (!/^(?=.*[A-Z])(?=.*[0-9])[A-Z0-9]{10}$/.test(mpesaCode)) {
     return NextResponse.json({ ok: false, error: 'Enter the M-Pesa confirmation code from the payment SMS' }, { status: 400 });
   }
 
@@ -57,5 +58,6 @@ export async function POST(req: NextRequest) {
   });
 
   if ('error' in result) return NextResponse.json({ ok: false, error: result.error }, { status: 400 });
+  await logAudit('sale', session.userId, { buyerName, total, mpesaCode: mpesaCode.slice(-4) });
   return NextResponse.json({ ok: true, ...result });
 }

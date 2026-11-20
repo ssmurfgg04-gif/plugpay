@@ -6,6 +6,10 @@ export function Step1Building({ active = true }) {
   const {
     obBldgName,
     setObBldgName,
+    obStreet,
+    setObStreet,
+    obMapsLink,
+    setObMapsLink,
     obFloorsCount,
     setObFloorsCount,
     obBasementsCount,
@@ -38,11 +42,11 @@ export function Step1Building({ active = true }) {
       </div>
       <div className="ob-field">
         <label className="ob-label">Street / Location</label>
-        <input className="ob-input" type="text" placeholder="e.g. Mama Ngina Street, Nairobi CBD" />
+        <input className="ob-input" type="text" placeholder="e.g. Mama Ngina Street, Nairobi CBD" value={obStreet} onChange={(e) => setObStreet(e.target.value)} />
       </div>
       <div className="ob-field">
         <label className="ob-label">{"Google Maps Link \u2014 pinpoint exact location"}</label>
-        <input className="ob-input" type="url" placeholder="https://maps.app.goo.gl/…" inputMode="url" />
+        <input className="ob-input" type="url" placeholder="https://maps.app.goo.gl/…" inputMode="url" value={obMapsLink} onChange={(e) => setObMapsLink(e.target.value)} />
         <div
           style={{
             fontSize: "10.5px",

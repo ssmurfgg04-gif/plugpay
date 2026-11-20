@@ -103,6 +103,25 @@ export async function createReceipt(input: {
     return { error: 'This M-Pesa code has already been recorded.' };
   }
 
+  // Stock check: block the sale if any item's stock would go negative.
+  const { data: products } = await supabase()
+    .from('products')
+    .select('id, name, stock')
+    .eq('merchant_id', input.merchant_id);
+  const productByName = new Map<string, { id: string; stock: number | null }>();
+  for (const p of products ?? []) {
+    productByName.set(String(p.name).trim().toLowerCase(), { id: String(p.id), stock: p.stock });
+  }
+  const decrements: { id: string; qty: number }[] = [];
+  for (const item of input.items) {
+    const prod = productByName.get(item.name.trim().toLowerCase());
+    if (!prod) continue;
+    if (prod.stock !== null && prod.stock < item.qty) {
+      return { error: `Not enough stock for "${item.name}" (have ${prod.stock}, need ${item.qty}).` };
+    }
+    decrements.push({ id: prod.id, qty: item.qty });
+  }
+
   // receipt_no is assigned atomically by the receipts_set_no DB trigger
   // (backed by receipts_no_seq) to avoid collisions under concurrent inserts.
   const { data: inserted, error } = await supabase()
@@ -124,6 +143,17 @@ export async function createReceipt(input: {
       return { error: 'This M-Pesa code has already been recorded.' };
     }
     return { error: error.message };
+  }
+
+  // Decrement stock for matched products (best-effort, after successful insert).
+  for (const d of decrements) {
+    try {
+      const prod = (products ?? []).find((p) => String(p.id) === d.id);
+      const newStock = (prod?.stock ?? 0) - d.qty;
+      await supabase().from('products').update({ stock: Math.max(0, newStock) }).eq('id', d.id);
+    } catch {
+      // ignore; sale already recorded
+    }
   }
   return { receipt_no: inserted?.receipt_no ?? '' };
 }

@@ -219,7 +219,7 @@ export async function GET() {
               label: `${floor === 'G' || floor === '0' ? 'Ground Floor' : 'Floor ' + floor}, Stall ${String(s.code ?? '')}`,
             };
           });
-        const accountId = lbAccounts[0]?.id ?? 'll';
+        const accountId = String(lbAccounts[0]?.id ?? 'll');
         lbData[accountId] = {
           pending,
           verified,

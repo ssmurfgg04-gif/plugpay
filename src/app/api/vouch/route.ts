@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { addVouch } from '@/lib/data';
 import { getSession } from '@/lib/session';
+import { limitAuth } from '@/lib/rate-limit';
+import { logAudit } from '@/lib/audit';
+import { recomputeTrust } from '@/lib/trust';
 
 export async function POST(req: NextRequest) {
+  const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+  const { ok: rlOk } = limitAuth('vouch', clientIP, 20, 60_000);
+  if (!rlOk) return NextResponse.json({ ok: false, error: 'Too many requests. Try again in a minute.' }, { status: 429 });
   const session = await getSession();
   if (!session) {
     return NextResponse.json(
@@ -23,5 +29,8 @@ export async function POST(req: NextRequest) {
   if (!from?.id || !to?.id) return NextResponse.json({ ok: false, error: 'Trader not found' }, { status: 404 });
 
   const result = await addVouch(from.id, to.id);
+  await recomputeTrust(from.id);
+  await recomputeTrust(to.id);
+  await logAudit('vouch', session.userId, { toSlug });
   return NextResponse.json(result, { status: result.ok ? 200 : 400 });
 }

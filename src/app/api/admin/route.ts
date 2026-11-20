@@ -13,7 +13,7 @@ export async function GET() {
   }
   try {
     const db = supabase();
-    const [usersRes, merchantsRes, buildingsRes, receiptsRes, invoicesRes, claimsRes, appUsersRes] = await Promise.all([
+    const [usersRes, merchantsRes, buildingsRes, receiptsRes, invoicesRes, claimsRes] = await Promise.all([
       db.from('app_users').select('id, email, role, merchant_slug, landlord_id, created_at').order('created_at', { ascending: false }).limit(500),
       db.from('merchants').select('id, slug, business_name, owner_name, email, category, building_name, stall_label, verified, trust_score, sales_count, rating_avg, rating_count, claimed, is_demo, created_at').order('created_at', { ascending: false }).limit(500),
       db.from('buildings').select('id, slug, name, address, area, total_stalls, registered_merchants, avg_rating, coverage_pct, verified, created_at').order('created_at', { ascending: false }).limit(500),

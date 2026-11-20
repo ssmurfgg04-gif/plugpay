@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { usePlugPay } from "@/store/context";
+import { AuthLandlordOtp } from "@/components/seller/auth/AuthLandlordOtp";
 import { authIconWrap, authLabel, authLink, authSubmitBtn, focusRing } from "@/lib/seller";
 import { LOGO_DATA_URI } from "@/lib/assets";
 
@@ -59,6 +60,13 @@ export function AuthEmailStep() {
   } = usePlugPay();
 
   const [showPw, setShowPw] = useState(false);
+  const [otpMode, setOtpMode] = useState(false);
+  const [otpEmail, setOtpEmail] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpToken, setOtpToken] = useState("");
+  const [otpPin, setOtpPin] = useState("");
+  const [otpMsg, setOtpMsg] = useState("");
+  const [otpBusy, setOtpBusy] = useState(false);
 
   var roleCopy = {
     trader: {
@@ -77,6 +85,18 @@ export function AuthEmailStep() {
       cta: "Create agent account",
     },
   }[authRole || "trader"];
+
+  if (authRole === "landlord" && otpMode) {
+    return (
+      <div className="auth-shell">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <div style={{ fontWeight: 800, fontSize: 15 }}>Landlord sign-in (email OTP)</div>
+          <button type="button" onClick={() => setOtpMode(false)} style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: 12 }}>Use password instead</button>
+        </div>
+        <AuthLandlordOtp onDone={() => setOtpMode(false)} />
+      </div>
+    );
+  }
 
   return (
     <div className="auth-shell">
@@ -214,6 +234,13 @@ export function AuthEmailStep() {
         </button>
       </form>
 
+      {authRole === "landlord" && (
+        <div style={{ marginTop: 8, textAlign: "center", fontSize: 12.5 }}>
+          <button type="button" onClick={() => setOtpMode(true)} style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer" }}>
+            Sign in with email OTP instead
+          </button>
+        </div>
+      )}
       <div style={{ marginTop: "16px", textAlign: "center", fontSize: "12.5px", color: "var(--muted)", lineHeight: "1.6" }}>
         {authMode === "signin" ? (
           <span>
